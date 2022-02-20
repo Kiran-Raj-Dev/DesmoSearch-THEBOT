@@ -112,6 +112,7 @@ async def on_message(message):
     first_run = True
     num = 1
     Gnum = 1
+    GnumDisplay=0
     while True:
         if first_run:
             first_run = False
@@ -128,17 +129,19 @@ async def on_message(message):
         elif num > 1 and num < max_page:
             reactmoji.extend(['⏪', '⏩'])
 
-        if max_page == 1 and num == 1:
+        if len(searchresult) == 1 and Gnum == 0:
             pass
-        elif num == 1:
+        elif Gnum == 1:
             reactmoji.append('🔽')
-        elif num == max_page:
+        elif num == len(searchresult) and Gnum-noofresults*(num-1)>0:
             reactmoji.append('🔼')
-        elif num > 1 and num < max_page:
+        elif Gnum > 1 and num < len(searchresult):
             reactmoji.extend(['🔼', '🔽'])
 
         reactmoji.append('✅')
-
+        if str(message.author.id)=='686012491607572515':
+           reactmoji.append('❌')
+  
         for react in reactmoji:
             await msg.add_reaction(react)
             
@@ -160,39 +163,50 @@ async def on_message(message):
             pass
         elif '⏪' in str(res.emoji):
             num = num - 1
-            Gnum = (num-1)*noofresults
+            Gnum = (num-1)*noofresults+1
+            GnumDisplay=0
             await msg.clear_reactions()
             await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
         elif '⏩' in str(res.emoji):
             num = num + 1
-            Gnum = (num-1)*noofresults
+            Gnum = (num-1)*noofresults+1
+            GnumDisplay=0
             await msg.clear_reactions()
             await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
         elif '🔽' in str(res.emoji):
-            Gnum  = Gnum + 1
+            Gnum  = Gnum if GnumDisplay==0 else Gnum+1
+            GnumDisplay=1
             num = math.ceil(Gnum/noofresults)
             await msg.clear_reactions()
             await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
-        elif '🔽' in str(res.emoji):
-            Gnum  = Gnum - 1
+        elif '🔼' in str(res.emoji):
+            Gnum  = Gnum if GnumDisplay==0 else Gnum-1
+            GnumDisplay=1
             num = math.ceil(Gnum/noofresults)
             await msg.clear_reactions()
             await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
         elif '✅' in str(res.emoji):
-            #await message.delete()
-            #return await msg.delete()
             return await msg.clear_reactions()
+        elif '❌' in str(res.emoji):
+            await message.delete()
+            return await msg.delete()
 
     
 def createembed(Gnum,num,result,max_page,message):
   datahashes=result[noofresults*(num-1):noofresults*num+1]
-  thedescription="".join(f'{(num-1)*noofresults+i+1}. "{str(objowner.get(str(datahashes[i]),None))}": [{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]})\n'for i in range(len(datahashes)))
+  thedescription="".join(f'{"> **" if Gnum==(num-1)*noofresults+i+1 else ""}{(num-1)*noofresults+i+1}. "{str(objowner.get(str(datahashes[i]),None))}": [{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]}){"**" if Gnum==(num-1)*noofresults+i+1 else ""}\n'for i in range(len(datahashes)))
+  
   pattern2=re.compile(r"!desmos (([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
   searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
   embed = discord.Embed(color=0x19212d, title=str(len(result))+" graphs for \""+searchterm+"\"",description=thedescription)
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
-  
   embed.set_footer(text="Page: "+str(num)+"/"+str(max_page))
+  if Gnum>-1:
+    dahash=result[Gnum]
+    embed.set_image(url=f"https://saved-work.desmos.com/calc_thumbs/production/{dahash}.png")
+    embed.add_field(name="Graph Selected:", value=f"https://www.desmos.com/calculator/{dahash}", inline=False)
+    if objowner.get(str(dahash),None) is not None:
+      embed.add_field(name="Probable Author", value=objowner.get(str(dahash),None), inline=False)
   return embed
   
 async def dmsend(msg):
