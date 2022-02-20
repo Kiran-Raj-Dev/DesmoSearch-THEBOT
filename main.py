@@ -16,7 +16,7 @@ import re
 from replit import db
 import asyncio
 import math
-
+import urllib.request
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
 '''
@@ -52,6 +52,7 @@ async def on_message(message):
   if message.author == client.user:
     return
   elif len(list(x))==1:
+
     db['searches']=db['searches']+1
     await on_ready()
     await dmsend(repr(message)+"\n\n"+message.content)
@@ -194,7 +195,7 @@ async def on_message(message):
     
 def createembed(Gnum,num,result,max_page,message):
   datahashes=result[noofresults*(num-1):noofresults*num+1]
-  thedescription="".join(f'{"> **" if Gnum==(num-1)*noofresults+i+1 else ""}{(num-1)*noofresults+i+1}. "{str(objowner.get(str(datahashes[i]),None))}": [{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]}){"**" if Gnum==(num-1)*noofresults+i+1 else ""}\n'for i in range(len(datahashes)))
+  thedescription="".join(f'{"> __**" if Gnum==(num-1)*noofresults+i+1 else ""}{(num-1)*noofresults+i+1}. "{str(objowner.get(str(datahashes[i]),None))}": [{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]}){"**__" if Gnum==(num-1)*noofresults+i+1 else ""}\n'for i in range(len(datahashes)))
   
   pattern2=re.compile(r"!desmos (([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
   searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
@@ -203,10 +204,12 @@ def createembed(Gnum,num,result,max_page,message):
   embed.set_footer(text="Page: "+str(num)+"/"+str(max_page))
   if Gnum>-1:
     dahash=result[Gnum]
+    #dainfo=getinfo("https://www.desmos.com/calculator/"+dahash)
     embed.set_image(url=f"https://saved-work.desmos.com/calc_thumbs/production/{dahash}.png")
     embed.add_field(name="Graph Selected:", value=f"https://www.desmos.com/calculator/{dahash}", inline=False)
     if objowner.get(str(dahash),None) is not None:
-      embed.add_field(name="Probable Author", value=objowner.get(str(dahash),None), inline=False)
+      embed.add_field(name="Possible Author", value=objowner.get(str(dahash),None), inline=False)
+    #embed.add_field(name="Date Created", value=dainfo['date'], inline=False)
   return embed
   
 async def dmsend(msg):
@@ -220,6 +223,24 @@ def checkIfDuplicates(listOfElems):
         return False
     else:
         return True
+
+def getinfo(url):
+  fp = urllib.request.urlopen(url)
+  mybytes = fp.read()
+  
+  mystr = mybytes.decode("utf8")
+  fp.close()
+  patternparent = re.compile(r"quot;parent_hash&quot;:&quot;([a-z0-9]{10,20})&quot;")
+  parentGraph=None if len(list(patternparent.finditer(mystr)))==0 else [ii.group(1) for ii in patternparent.finditer(mystr)][0]
+  patterndate = re.compile(r"created&quot;:&quot;(.*?)&quot")
+  dateofGraph=[ii.group(1) for ii in patterndate.finditer(mystr)][0]
+  patternnote = re.compile(r"&quot;text&quot;:&quot;(.*?)&quot")
+  notes=None if len(list(patternnote.finditer(mystr)))==0 else [ii.group(1) for ii in patternnote.finditer(mystr)]
+  patternfolder = re.compile(r"&quot;type&quot;:&quot;folder&quot;,&quot;id&quot;:&quot;[0-9]*&quot;,&quot;title&quot;:&quot;(.*?)&quot;")
+  folders=None if len(list(patternfolder.finditer(mystr)))==0 else [ii.group(1) for ii in patternfolder.finditer(mystr)]
+  patternvar = re.compile(r";(.(?:_{?\w*}?)?)=")
+  variables=None if len(list(patternvar.finditer(mystr)))==0 else [ii.group(1) for ii in patternvar.finditer(mystr)]
+  return {"parentGraph":parentGraph,"date":dateofGraph,"folders":folders,"notes":notes,"variables":list(set(variables))}
 
 keep_alive()
 client.run(token)
