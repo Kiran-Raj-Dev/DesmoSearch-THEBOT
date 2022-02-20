@@ -17,6 +17,7 @@ from replit import db
 import asyncio
 import math
 import urllib.request
+import html
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
 '''
@@ -49,6 +50,8 @@ async def on_ready():
 async def on_message(message): 
   pattern=re.compile(r"!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?")
   x=pattern.finditer(message.content)
+  pattern02=re.compile(r"!https:\/\/www.desmos.com\/calculator\/([a-z0-9]{10})")
+  x02=pattern02.finditer(message.content)
   if message.author == client.user:
     return
   elif len(list(x))==1:
@@ -114,6 +117,7 @@ async def on_message(message):
     num = 1
     Gnum = 1
     GnumDisplay=0
+    infograph=0
     while True:
         if first_run:
             first_run = False
@@ -134,14 +138,16 @@ async def on_message(message):
             pass
         elif Gnum == 1:
             reactmoji.append('🔽')
-        elif num == len(searchresult) and Gnum-noofresults*(num-1)>0:
+        elif Gnum == len(searchresult) :
             reactmoji.append('🔼')
-        elif Gnum > 1 and num < len(searchresult):
+        elif Gnum > 1 and Gnum<len(searchresult):
             reactmoji.extend(['🔼', '🔽'])
 
         reactmoji.append('✅')
         if str(message.author.id)=='686012491607572515':
            reactmoji.append('❌')
+        if GnumDisplay==1:
+          reactmoji.append('🔎')
   
         for react in reactmoji:
             await msg.add_reaction(react)
@@ -166,12 +172,14 @@ async def on_message(message):
             num = num - 1
             Gnum = (num-1)*noofresults+1
             GnumDisplay=0
+            infograph=0
             await msg.clear_reactions()
             await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
         elif '⏩' in str(res.emoji):
             num = num + 1
             Gnum = (num-1)*noofresults+1
             GnumDisplay=0
+            infograph=0
             await msg.clear_reactions()
             await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
         elif '🔽' in str(res.emoji):
@@ -191,11 +199,43 @@ async def on_message(message):
         elif '❌' in str(res.emoji):
             await message.delete()
             return await msg.delete()
-
+        elif '🔎' in str(res.emoji):
+            infograph=1-infograph
+            await msg.clear_reactions()
+        if infograph==1:
+          await aboutchain(message,searchresult[Gnum-1],msg,[True,Gnum])
+        else:
+          await msg.edit(embed=createembed(-1 if GnumDisplay==0 else Gnum,num,searchresult,max_page,message))
+          
+  elif len(list(x02))==1:
     
+    db['searches']=db['searches']+1
+    await on_ready()
+    await dmsend(repr(message)+"\n\n"+message.content)
+    
+    thehash01=[ii.group(1) for ii in pattern02.finditer(message.content)][0]
+    await message.delete()
+    msg2 = await message.channel.send("🔎")
+    await aboutchain(message,thehash01,msg2,[False])
+
+  elif message.content=="!dhelp":
+    helpembed=discord.Embed(title="Commands",description="!dhelp, !desmos, ![+desmoslink]")
+    helpembed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
+    await message.channel.send(embed=helpembed,content='')
+
+async def aboutchain(message,thehash01,msg2,fromSearch):
+  theembed=aboutembed(thehash01,message)
+  if fromSearch[0]:
+    pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
+    searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
+    ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
+    theembed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"")
+  
+  await msg2.edit(embed=theembed,content='')
+#
 def createembed(Gnum,num,result,max_page,message):
   datahashes=result[noofresults*(num-1):noofresults*num+1]
-  thedescription="".join(f'{"> __**" if Gnum==(num-1)*noofresults+i+1 else ""}{(num-1)*noofresults+i+1}. "{str(objowner.get(str(datahashes[i]),None))}": [{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]}){"**__" if Gnum==(num-1)*noofresults+i+1 else ""}\n'for i in range(len(datahashes)))
+  thedescription="".join(f'{"> __**" if Gnum==(num-1)*noofresults+i+1 else ""}{(num-1)*noofresults+i+1}. {"" if objowner.get(str(datahashes[i]),None) is None else str(objowner.get(str(datahashes[i]),None))+": "}[{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]}){"**__" if Gnum==(num-1)*noofresults+i+1 else ""}\n'for i in range(len(datahashes)))
   
   pattern2=re.compile(r"!desmos (([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
   searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
@@ -203,18 +243,36 @@ def createembed(Gnum,num,result,max_page,message):
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
   embed.set_footer(text="Page: "+str(num)+"/"+str(max_page))
   if Gnum>-1:
-    dahash=result[Gnum]
+    dahash=result[Gnum-1]
     #dainfo=getinfo("https://www.desmos.com/calculator/"+dahash)
     embed.set_image(url=f"https://saved-work.desmos.com/calc_thumbs/production/{dahash}.png")
     embed.add_field(name="Graph Selected:", value=f"https://www.desmos.com/calculator/{dahash}", inline=False)
-    if objowner.get(str(dahash),None) is not None:
-      embed.add_field(name="Possible Author", value=objowner.get(str(dahash),None), inline=False)
+    
     #embed.add_field(name="Date Created", value=dainfo['date'], inline=False)
   return embed
+
+def aboutembed(thehash,message):
+  embed = discord.Embed(color=0x19212d, title=thetitles[thehash],description="https://www.desmos.com/calculator/"+thehash)
+  dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
+  embed.set_image(url=f"https://saved-work.desmos.com/calc_thumbs/production/{thehash}.png")
+  if objowner.get(str(thehash),None) is not None:
+    embed.add_field(name="Possible Author", value=objowner.get(str(thehash),None), inline=False)
+  embed.add_field(name="Date Created", value=dainfo['date'], inline=False)
+  if dainfo['notes'] is not None and len(str(dainfo['notes']))<1020:
+    embed.add_field(name="Notes", value="".join(f"\n{iii+1}. {html.unescape(dainfo['notes'][iii])}" for iii in range(len(dainfo['notes']))), inline=False)
+  elif len(str(dainfo['notes']))>1020:
+    embed.add_field(name="Notes", value="Contains "+str(len(dainfo['notes']))+" notes", inline=False)
+  if dainfo['folders'] is not None:
+    embed.add_field(name="Folders", value="".join(f"\n{iii+1}. {html.unescape(dainfo['folders'][iii])}" for iii in range(len(dainfo['folders']))), inline=False)
+  embed.add_field(name="Variables", value="```"+' , '.join(dainfo['variables'])+"```", inline=False)
+  embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
+  return embed
+
   
 async def dmsend(msg):
     user = await client.fetch_user("686012491607572515")
     await DMChannel.send(user,"```"+msg+"```")
+
 
 def checkIfDuplicates(listOfElems):
     ''' Check if given list contains any duplicates '''
