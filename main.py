@@ -1,5 +1,3 @@
-#now the !desmos command had optional parameters ?=
-
 import base64
 import requests
 from keep_alive import keep_alive
@@ -113,10 +111,11 @@ async def on_message(message):
     max_page=math.ceil(len(searchresult)/noofresults)
     first_run = True
     num = 1
+    Gnum = 1
     while True:
         if first_run:
             first_run = False
-            msg = await message.channel.send(embed=createembed(num,message.content,searchresult,max_page,message))
+            msg = await message.channel.send(embed=createembed(-1,num,searchresult,max_page,message))
 
         reactmoji = []
 
@@ -128,6 +127,15 @@ async def on_message(message):
             reactmoji.append('⏪')
         elif num > 1 and num < max_page:
             reactmoji.extend(['⏪', '⏩'])
+
+        if max_page == 1 and num == 1:
+            pass
+        elif num == 1:
+            reactmoji.append('🔽')
+        elif num == max_page:
+            reactmoji.append('🔼')
+        elif num > 1 and num < max_page:
+            reactmoji.extend(['🔼', '🔽'])
 
         reactmoji.append('✅')
 
@@ -152,24 +160,35 @@ async def on_message(message):
             pass
         elif '⏪' in str(res.emoji):
             num = num - 1
+            Gnum = (num-1)*noofresults
             await msg.clear_reactions()
-            await msg.edit(embed=createembed(num,message.content,searchresult,max_page,message))
+            await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
         elif '⏩' in str(res.emoji):
             num = num + 1
+            Gnum = (num-1)*noofresults
             await msg.clear_reactions()
-            await msg.edit(embed=createembed(num,message.content,searchresult,max_page,message))
-
+            await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
+        elif '🔽' in str(res.emoji):
+            Gnum  = Gnum + 1
+            num = math.ceil(Gnum/noofresults)
+            await msg.clear_reactions()
+            await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
+        elif '🔽' in str(res.emoji):
+            Gnum  = Gnum - 1
+            num = math.ceil(Gnum/noofresults)
+            await msg.clear_reactions()
+            await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
         elif '✅' in str(res.emoji):
             #await message.delete()
             #return await msg.delete()
             return await msg.clear_reactions()
 
     
-def createembed(num,searchterm,result,max_page,message):
+def createembed(Gnum,num,result,max_page,message):
   datahashes=result[noofresults*(num-1):noofresults*num+1]
   thedescription="".join(f'{(num-1)*noofresults+i+1}. "{str(objowner.get(str(datahashes[i]),None))}": [{thetitles[datahashes[i]]}](https://www.desmos.com/calculator/{datahashes[i]})\n'for i in range(len(datahashes)))
   pattern2=re.compile(r"!desmos (([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
-  searchterm=[ii2.group(1) for ii2 in pattern2.finditer(searchterm)][0]
+  searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
   embed = discord.Embed(color=0x19212d, title=str(len(result))+" graphs for \""+searchterm+"\"",description=thedescription)
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
   
