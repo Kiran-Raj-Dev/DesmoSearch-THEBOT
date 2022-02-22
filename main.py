@@ -140,94 +140,98 @@ async def on_message(message):
     Gnum = 1
     GnumDisplay=0
     infograph=0
+    dachoose=[0,0,0]
     while True:
-        if first_run:
-            first_run = False
-            msg = await message.channel.send(embed=createembed(-1,num,searchresult,max_page,message))
+      if first_run:
+          first_run = False
+          msg = await message.channel.send(embed=createembed(-1,num,searchresult,max_page,message))
 
-        reactmoji = []
+      reactmoji = []
 
-        if max_page == 1 and num == 1:
-            pass
-        elif num == 1:
-            reactmoji.append('⏩')
-        elif num == max_page:
-            reactmoji.append('⏪')
-        elif num > 1 and num < max_page:
-            reactmoji.extend(['⏪', '⏩'])
+      if max_page == 1 and num == 1:
+          pass
+      elif num == 1:
+          reactmoji.append('⏩')
+      elif num == max_page:
+          reactmoji.append('⏪')
+      elif num > 1 and num < max_page:
+          reactmoji.extend(['⏪', '⏩'])
 
-        if len(searchresult) == 1 and Gnum == 0:
-            pass
-        elif Gnum == 1:
-            reactmoji.append('🔽')
-        elif Gnum == len(searchresult) :
-            reactmoji.append('🔼')
-        elif Gnum > 1 and Gnum<len(searchresult):
-            reactmoji.extend(['🔼', '🔽'])
+      if len(searchresult) == 1 and Gnum == 1 and GnumDisplay==1:
+          pass
+      elif Gnum == 1:
+          reactmoji.append('🔽')
+      elif Gnum == len(searchresult) :
+          reactmoji.append('🔼')
+      elif Gnum > 1 and Gnum<len(searchresult):
+          reactmoji.extend(['🔼', '🔽'])
 
-        reactmoji.append('✅')
-        if str(message.author.id)=='686012491607572515':
-           reactmoji.append('❌')
-        if GnumDisplay==1:
-          reactmoji.append('🔎')
-  
-        for react in reactmoji:
-            await msg.add_reaction(react)
-            
+      reactmoji.append('✅')
+      if str(message.author.id)=='686012491607572515':
+         reactmoji.append('❌')
+      if GnumDisplay==1:
+        reactmoji.append('🔎')
 
-        def check_react(reaction, user):
-            if reaction.message.id != msg.id:
-                return False
-            if user != message.author:
-                return False
-            if str(reaction.emoji) not in reactmoji:
-                return False
-            return True
+      for react in reactmoji:
+          await msg.add_reaction(react)
+          
 
-        try:
-            res, user = await client.wait_for('reaction_add', timeout=100.0, check=check_react)
-        except asyncio.TimeoutError:
-            return await msg.clear_reactions()
-        if user != message.author:
-            pass
-        elif '⏪' in str(res.emoji):
-            num = num - 1
-            Gnum = (num-1)*noofresults+1
-            GnumDisplay=0
-            infograph=0
-            await msg.clear_reactions()
-            await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
-        elif '⏩' in str(res.emoji):
-            num = num + 1
-            Gnum = (num-1)*noofresults+1
-            GnumDisplay=0
-            infograph=0
-            await msg.clear_reactions()
-            await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
-        elif '🔽' in str(res.emoji):
-            Gnum  = Gnum if GnumDisplay==0 else Gnum+1
-            GnumDisplay=1
-            num = math.ceil(Gnum/noofresults)
-            await msg.clear_reactions()
-            await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
-        elif '🔼' in str(res.emoji):
-            Gnum  = Gnum if GnumDisplay==0 else Gnum-1
-            GnumDisplay=1
-            num = math.ceil(Gnum/noofresults)
-            await msg.clear_reactions()
-            await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
-        elif '✅' in str(res.emoji):
-            return await msg.clear_reactions()
-        elif '❌' in str(res.emoji):
-            await message.delete()
-            return await msg.delete()
-        elif '🔎' in str(res.emoji):
-            infograph=1-infograph
-            await msg.clear_reactions()
-        if infograph==1:
-          await aboutchain(message,searchresult[Gnum-1],msg,[True,Gnum])
-        else:
-          await msg.edit(embed=createembed(-1 if GnumDisplay==0 else Gnum,num,searchresult,max_page,message))
+      def check_react(reaction, user):
+          if reaction.message.id != msg.id:
+              return False
+          if user != message.author:
+              return False
+          if str(reaction.emoji) not in reactmoji and str(reaction.emoji) not in ['👈','👉','🖱️']:
+              return False
+          return True
+
+      try:
+          res, user = await client.wait_for('reaction_add', timeout=100.0, check=check_react)
+      except asyncio.TimeoutError:
+          return await msg.clear_reactions()
+      if user != message.author:
+          pass
+      elif '⏪' in str(res.emoji):
+          num = num - 1
+          Gnum = (num-1)*noofresults+1
+          GnumDisplay=0
+          infograph=0
+          await msg.clear_reactions()
+          await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
+      elif '⏩' in str(res.emoji):
+          num = num + 1
+          Gnum = (num-1)*noofresults+1
+          GnumDisplay=0
+          infograph=0
+          await msg.clear_reactions()
+          await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
+      elif '🔽' in str(res.emoji):
+          Gnum  = Gnum if GnumDisplay==0 else Gnum+1
+          GnumDisplay=1
+          num = math.ceil(Gnum/noofresults)
+          await msg.clear_reactions()
+          await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
+      elif '🔼' in str(res.emoji):
+          Gnum  = Gnum if GnumDisplay==0 else Gnum-1
+          GnumDisplay=1
+          num = math.ceil(Gnum/noofresults)
+          await msg.clear_reactions()
+          await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
+      elif '✅' in str(res.emoji):
+          return await msg.clear_reactions()
+      elif '❌' in str(res.emoji):
+          await message.delete()
+          return await msg.delete()
+      elif '🔎' in str(res.emoji):
+          infograph=1-infograph
+          await msg.clear_reactions()
+          dachoose[1]=searchresult[Gnum-1]
+          dachoose[2]=[searchresult[Gnum-1]]
+      
+      if infograph==1:
+        dachoose=await aboutchain(message,searchresult[Gnum-1],msg,[True,Gnum,res,user,dachoose])
+      else:
+        await msg.edit(embed=createembed(-1 if GnumDisplay==0 else Gnum,num,searchresult,max_page,message))
           
   elif len(list(x02))==1:
     
@@ -392,7 +396,7 @@ async def on_message(message):
         xtick=AutomateXYLabels(json.loads(searchtermx)[0],json.loads(searchtermx)[1])
         ytick=AutomateXYLabels(json.loads(searchtermy)[0],json.loads(searchtermy)[1])
         for ddemo in ['🔄','➡️','⬆️','⬅️','⬇️','🔬','🔭','✅']:
-          await message.remove_reaction(ddemo, message.author)
+          await msg3.remove_reaction(emoji= ddemo, member = user3)
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
           
     
@@ -417,55 +421,60 @@ async def getready(message):
   await dmsend(repr(message)+"\n\n"+message.content)
   
 async def aboutchain(message,thehash01,msg2,fromSearch):
-  theinfo = getinfo("https://www.desmos.com/calculator/"+thehash01)
+  newhash=fromSearch[4][1] if fromSearch[0] else thehash01
+  historylist=fromSearch[4][2] if fromSearch[0] else [thehash01]
+  theinfo = getinfo("https://www.desmos.com/calculator/"+newhash)
   subgraphs = []
   if theinfo['parent_hash'] is not None:
-    subgraphs.extend(theinfo['parent_hash'])
-  choose = len(subgraphs)
-  subgraphs.append(thehash01)
-  thevalue=','.join([GraphsList[i] for i in range(len(GraphsList)) if (thehash01 in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+    subgraphs.append(theinfo['parent_hash'])
+  choose = fromSearch[4][0] if fromSearch[0] else len(subgraphs)
+  subgraphs.append(newhash)
+  thevalue=','.join([GraphsList[i] for i in range(len(GraphsList)) if (newhash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
   if thevalue!="":
     subgraphs.extend(thevalue.split(','))
 
-  
+  reactmoji2 = []
+  reactmoji2.extend(['👈','👉','🖱️'])
 
-  first_run2=True
-  while True:
-    if first_run2:
-        first_run2 = False
-        await msg2.edit(embed=aboutembed(message,thehash01,fromSearch,subgraphs[choose%len(subgraphs)]),content='')
-  
-    reactmoji2 = []
-    reactmoji2.extend(['👈','👉'])
-  
-    for react in reactmoji2:
-        await msg2.add_reaction(react)
-  
-    def check_react(reaction, user):
-        if reaction.message.id != msg2.id:
-            return False
-        if user != message.author:
-            return False
-        if str(reaction.emoji) not in reactmoji2:
-            return False
-        return True
-  
-    try:
+  for react in reactmoji2:
+      await msg2.add_reaction(react)
+
+  def check_react(reaction, user):
+      if reaction.message.id != msg2.id:
+          return False
+      if user != message.author:
+          return False
+      if str(reaction.emoji) not in reactmoji2:
+          return False
+      return True
+  res2, user2 = '',''
+  try:
+      if fromSearch[0]:
+        res2, user2 = fromSearch[2], fromSearch[3]
+      else:
         res2, user2 = await client.wait_for('reaction_add', timeout=100.0, check=check_react)
-    except asyncio.TimeoutError:
-        return await msg2.clear_reactions()
-    if user2 != message.author:
-        pass
-    elif '👉' in str(res2.emoji):
-        choose=choose+1
-    elif '👈' in str(res2.emoji):
-        choose=choose-1
-    
-    await msg2.remove_reaction(emoji= "👉", member = user2)
-    await msg2.remove_reaction(emoji= "👈", member = user2)
-    await msg2.edit(embed=aboutembed(message,thehash01,fromSearch,subgraphs[choose%len(subgraphs)]),content='')
+  except asyncio.TimeoutError:
+      return await msg2.clear_reactions()
+  if user2 != message.author:
+      pass
+  elif '👉' in str(res2.emoji):
+      choose=choose+1
+  elif '👈' in str(res2.emoji):
+      choose=choose-1
+  elif '🖱️' in str(res2.emoji):
+    newhash=subgraphs[choose]
+    choose=1
+    historylist.append(newhash)
+    subgraphs=[newhash]
+  
+  await msg2.remove_reaction(emoji= "👉", member = user2)
+  await msg2.remove_reaction(emoji= "👈", member = user2)
+  await msg2.remove_reaction(emoji= "🖱️", member = user2)
+  await msg2.edit(embed=aboutembed(message,newhash,fromSearch,subgraphs[choose%len(subgraphs)],historylist),content='')
 
-def aboutembed(message,thehash,fromSearch,underline):
+  return ([choose,newhash,historylist])
+
+def aboutembed(message,thehash,fromSearch,underline,historylist):
   dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
   embed = discord.Embed(color=0x19212d, title=dainfo['title'],description="https://www.desmos.com/calculator/"+thehash)
   embed.set_image(url=dainfo['thumbUrl'])
@@ -490,7 +499,7 @@ def aboutembed(message,thehash,fromSearch,underline):
     pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
     searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
     ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
-    embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"")
+    embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"\n"+'→'.join(historylist))
   else:
     embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash)
   
