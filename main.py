@@ -74,48 +74,64 @@ async def on_message(message):
     titlecond = True if parameterterm==[None,None,None] else ('title' in parameterterm)
     ownercond = True if parameterterm==[None,None,None] else ('owner' in parameterterm)
     hashcond = True if parameterterm==[None,None,None] else ('hash' in parameterterm)
-    
+    slashcheckterm,slashcheck1,slashcheck2,slashcheck3=False,False,False,False
     if "/" in searchterm:
       searchterm=searchterm[1:-1]
+      slashcheckterm=True
     else:
       searchterm=searchterm.lower()
     if searchterm1 is None:
       searchterm1 = ""
     elif "/" in searchterm1:
       searchterm1=searchterm1[1:-1]
+      slashcheck1=True
     else:
       searchterm1=searchterm1.lower()
     if searchterm2 is None:
       searchterm2 = ""
     elif "/" in searchterm2:
       searchterm2=searchterm2[1:-1]
+      slashcheck2=True
     else:
       searchterm2=searchterm2.lower()
     if searchterm3 is None:
       searchterm3 = ""
     elif "/" in searchterm3:
       searchterm3=searchterm3[1:-1]
+      slashcheck3=True
     else:
       searchterm3=searchterm3.lower()
     
     print(f'"{searchterm}"')
 
     searchterm0sub=[searchterm1,searchterm2,searchterm3]
+    slashchecks=[slashcheck1,slashcheck2,slashcheck3]
     searchtermtitle, searchtermhash, searchtermowner = "", "", "" 
+    slashtitlecheck, slashhashcheck, slashownercheck = False,False,False
     try:
       searchtermtitle=searchterm0sub[parameterterm.index('title')]
+      slashtitlecheck=slashchecks[parameterterm.index('title')]
     except ValueError:
       searchtermtitle=""
     try:
       searchtermhash=searchterm0sub[parameterterm.index('hash')]
+      slashhashcheck=slashchecks[parameterterm.index('hash')]
     except ValueError:
       searchtermhash=""
     try:
       searchtermowner=searchterm0sub[parameterterm.index('owner')]
+      slashownercheck=slashchecks[parameterterm.index('owner')]
     except ValueError:
       searchtermowner=""
+      
+
+    searchtermpart = lambda data00 : data00 if slashcheckterm else data00.lower()
+    searchterm0 = searchtermpart(searchterm)
+    titlepart = lambda data00 : data00 if slashtitlecheck else data00.lower()
+    hashpart = lambda data00 : data00 if slashhashcheck else data00.lower()
+    ownerpart = lambda data00 : data00 if slashownercheck else data00.lower()
     
-    searchresult = [hash for hash, title in thetitles.items() if (titlecond*bool(re.search(searchterm, str(title))) or hashcond*bool(re.search(searchterm, str(hash))) or ownercond*bool(re.search(searchterm, str(objowner.get(str(hash),None))))) and (bool(re.search(searchtermtitle, str(title))) and bool(re.search(searchtermhash, str(hash))) and bool(re.search(searchtermowner, str(objowner.get(str(hash),None)))))]
+    searchresult = [hash for hash, title in thetitles.items() if (titlecond*bool(re.search(searchterm0, searchtermpart(str(title)))) or hashcond*bool(re.search(searchterm0, str(hash))) or ownercond*bool(re.search(searchterm0, searchtermpart(str(objowner.get(str(hash),None)))))) and (bool(re.search(titlepart(searchtermtitle), titlepart(str(title)))) and bool(re.search(hashpart(searchtermhash), hashpart(str(hash)))) and bool(re.search(ownerpart(searchtermowner), ownerpart(str(objowner.get(str(hash),None))))))]
 
     #https://gist.github.com/noaione/58cdd25a1cc19388021deb0a77582c97
     max_page=math.ceil(len(searchresult)/noofresults)
@@ -401,25 +417,11 @@ async def getready(message):
   await dmsend(repr(message)+"\n\n"+message.content)
   
 async def aboutchain(message,thehash01,msg2,fromSearch):
-  theembed=aboutembed(thehash01,message)
-  dainfo0=getinfo("https://www.desmos.com/calculator/"+thehash01)
-  if fromSearch[0]:
-    pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
-    searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
-    ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
-    theembed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"")
-  else:
-    theembed.set_footer(text='!https://www.desmos.com/calculator/'+thehash01)
-  
-  if dainfo0['parent_hash'] is not None:
-    theembed.add_field(name="Parent Graph", value=dainfo0['parent_hash'], inline=True)
-  davalue=' , '.join([GraphsList[i] for i in range(len(GraphsList)) if (thehash01 in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
-  if davalue!="":
-    theembed.add_field(name="Child Graphs", value=davalue, inline=True)
-  
+  theembed=aboutembed(message,thehash01,fromSearch)
+
   await msg2.edit(embed=theembed,content='')
 
-def aboutembed(thehash,message):
+def aboutembed(message,thehash,fromSearch):
   dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
   embed = discord.Embed(color=0x19212d, title=dainfo['title'],description="https://www.desmos.com/calculator/"+thehash)
   embed.set_image(url=dainfo['thumbUrl'])
@@ -439,6 +441,22 @@ def aboutembed(thehash,message):
   elif len(str(dainfo['variables']))>1020:
     embed.add_field(name="Variables", value="```"+"Contains "+str(len(dainfo['variables']))+" variables"+"```", inline=False)
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
+
+
+  if fromSearch[0]:
+    pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
+    searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
+    ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
+    embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"")
+  else:
+    embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash)
+  
+  if dainfo['parent_hash'] is not None:
+    embed.add_field(name="Parent Graph", value=dainfo['parent_hash'], inline=True)
+  embed.add_field(name="Current Graph", value=thehash, inline=True)
+  davalue=' , '.join([GraphsList[i] for i in range(len(GraphsList)) if (thehash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+  if davalue!="":
+    embed.add_field(name="Child Graphs", value=davalue, inline=True)
   
   return embed
 
@@ -449,11 +467,15 @@ def getinfo(hashurl):
   
   for key in ['hash','parent_hash','thumbUrl','stateUrl','title','access','created']:
     finaldict[key]=json.loads(soup.body['data-load-data'])['graph'][key]
-  finaldict['version']=json.loads(soup.body['data-load-data'])['graph']['state']['version']
-  expr=(json.loads(soup.body['data-load-data'])['graph']['state'])['expressions']['list']
+  finaldict['version']='null'
+  dastate=json.loads(soup.body['data-load-data'])['graph']['state']
+  if 'version' in dastate.keys():
+    finaldict['version']=dastate['version']
+  expr=dastate['expressions']['list']
   finaldict['expressions'] = expr
-  finaldict['notes']=[expr[i] for i in range(len(expr)) if expr[i]['type']=='text']
-  finaldict['folders']=[expr[i] for i in range(len(expr)) if expr[i]['type']=='folder']
+  finaldict['notes'], finaldict['folders']=[],[]
+  finaldict['notes']=[expr[i] for i in range(len(expr)) if expr[i]['type' if 'type' in expr[i] else 'id']=='text']
+  finaldict['folders']=[expr[i] for i in range(len(expr)) if expr[i]['type' if 'type' in expr[i] else 'id']=='folder']
   patternvar = re.compile(r"([A-Za-z](?:_{?\w*}?)?)=")
   finaldict['variables']=list(set([ii.group(1) for ii in patternvar.finditer(str(expr))]))
   return (finaldict)
