@@ -417,11 +417,55 @@ async def getready(message):
   await dmsend(repr(message)+"\n\n"+message.content)
   
 async def aboutchain(message,thehash01,msg2,fromSearch):
-  theembed=aboutembed(message,thehash01,fromSearch)
+  theinfo = getinfo("https://www.desmos.com/calculator/"+thehash01)
+  subgraphs = []
+  if theinfo['parent_hash'] is not None:
+    subgraphs.extend(theinfo['parent_hash'])
+  choose = len(subgraphs)
+  subgraphs.append(thehash01)
+  thevalue=','.join([GraphsList[i] for i in range(len(GraphsList)) if (thehash01 in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+  if thevalue!="":
+    subgraphs.extend(thevalue.split(','))
 
-  await msg2.edit(embed=theembed,content='')
+  
 
-def aboutembed(message,thehash,fromSearch):
+  first_run2=True
+  while True:
+    if first_run2:
+        first_run2 = False
+        await msg2.edit(embed=aboutembed(message,thehash01,fromSearch,subgraphs[choose%len(subgraphs)]),content='')
+  
+    reactmoji2 = []
+    reactmoji2.extend(['👈','👉'])
+  
+    for react in reactmoji2:
+        await msg2.add_reaction(react)
+  
+    def check_react(reaction, user):
+        if reaction.message.id != msg2.id:
+            return False
+        if user != message.author:
+            return False
+        if str(reaction.emoji) not in reactmoji2:
+            return False
+        return True
+  
+    try:
+        res2, user2 = await client.wait_for('reaction_add', timeout=100.0, check=check_react)
+    except asyncio.TimeoutError:
+        return await msg2.clear_reactions()
+    if user2 != message.author:
+        pass
+    elif '👉' in str(res2.emoji):
+        choose=choose+1
+    elif '👈' in str(res2.emoji):
+        choose=choose-1
+    
+    await msg2.remove_reaction(emoji= "👉", member = user2)
+    await msg2.remove_reaction(emoji= "👈", member = user2)
+    await msg2.edit(embed=aboutembed(message,thehash01,fromSearch,subgraphs[choose%len(subgraphs)]),content='')
+
+def aboutembed(message,thehash,fromSearch,underline):
   dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
   embed = discord.Embed(color=0x19212d, title=dainfo['title'],description="https://www.desmos.com/calculator/"+thehash)
   embed.set_image(url=dainfo['thumbUrl'])
@@ -432,7 +476,6 @@ def aboutembed(message,thehash,fromSearch):
   if len([] if dainfo['notes'] is None else dainfo['notes'])>0 and len(str(dainfo['notes']))<=1020:
     embed.add_field(name="Notes", value="".join(f"\n{iii+1}. [#{str(dainfo['notes'][iii]['id'])}]{(dainfo['notes'][iii]['text'])}" for iii in range(len(dainfo['notes']))), inline=False)
   elif len(str(dainfo['notes']))>1020:
-    print('hhhi')
     embed.add_field(name="Notes", value="Contains "+str(len(dainfo['notes']))+" notes", inline=False)
   if len([] if dainfo['folders'] is None else dainfo['folders'])>0:
     embed.add_field(name="Folders", value="".join(f"\n{iii+1}. [#{str(dainfo['folders'][iii]['id'])}]{dainfo['folders'][iii]['title']}" for iii in range(len(dainfo['folders']))), inline=False)
@@ -452,9 +495,9 @@ def aboutembed(message,thehash,fromSearch):
     embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash)
   
   if dainfo['parent_hash'] is not None:
-    embed.add_field(name="Parent Graph", value=dainfo['parent_hash'], inline=True)
-  embed.add_field(name="Current Graph", value=thehash, inline=True)
-  davalue=' , '.join([GraphsList[i] for i in range(len(GraphsList)) if (thehash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+    embed.add_field(name="Parent Graph", value=("__"+dainfo['parent_hash']+"__" if dainfo['parent_hash']==underline else dainfo['parent_hash']), inline=True)
+  embed.add_field(name="Current Graph", value=("__"+thehash+"__" if thehash==underline else thehash), inline=True)
+  davalue=' , '.join([("__"+GraphsList[i]+"__" if GraphsList[i]==underline else GraphsList[i]) for i in range(len(GraphsList)) if (thehash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
   if davalue!="":
     embed.add_field(name="Child Graphs", value=davalue, inline=True)
   
