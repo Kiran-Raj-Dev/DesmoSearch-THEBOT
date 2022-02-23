@@ -235,9 +235,7 @@ async def on_message(message):
           
   elif len(list(x02))==1:
     
-    db['searches']=db['searches']+1
-    await on_ready()
-    await dmsend(repr(message)+"\n\n"+message.content)
+    await getready(message)
     
     thehash01=[ii.group(1) for ii in pattern02.finditer(message.content)][0]
     await message.edit(suppress=True)
@@ -292,7 +290,9 @@ async def on_message(message):
     first_run3 = True
     strlist = lambda x, y: f"[{x},{y}]"
     while True:
+        reactmoji3 = []
         if first_run3:
+            reactmoji3.extend(['🔄','➡️','⬆️','⬅️','⬇️','🔬','🔭','✅'])
             first_run3 = False
             msg3 = await message.channel.send(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
           
@@ -303,7 +303,7 @@ async def on_message(message):
         scalex=(thex1-thex0)/10
         scaley=(they1-they0)/10
         zoomf=1.5
-        reactmoji3 = []
+        
         reactmoji3.extend(['🔄','➡️','⬆️','⬅️','⬇️','🔬','🔭','✅'])
         #['🔄','➡️','↗️','⬆️','↖️','⬅️','↙️','⬇️','↘️','➕','➖','✅']
         if str(message.author.id)=='686012491607572515':
@@ -341,42 +341,22 @@ async def on_message(message):
               thex0,thex1=thex0+scalex,thex1+scalex
               searchtermx=strlist(thex0,thex1)
               
-          if '↗️' in str(res3.emoji):
-              thex0,thex1=thex0+scalex,thex1+scalex
-              they0,they1=they0+scaley,they1+scaley
-              searchtermx=strlist(thex0,thex1)
-              searchtermy=strlist(they0,they1)
               
           if '⬆️' in str(res3.emoji):
               they0,they1=they0+scaley,they1+scaley
               searchtermy=strlist(they0,they1)
-              
-          if '↖️' in str(res3.emoji):
-              thex0,thex1=thex0-scalex,thex1-scalex
-              they0,they1=they0+scaley,they1+scaley
-              searchtermx=strlist(thex0,thex1)
-              searchtermy=strlist(they0,they1)
+
               
           if '⬅️' in str(res3.emoji):
               thex0,thex1=thex0-scalex,thex1-scalex
               searchtermx=strlist(thex0,thex1)
-              
-          if '↙️' in str(res3.emoji):
-              thex0,thex1=thex0-scalex,thex1-scalex
-              they0,they1=they0-scaley,they1-scaley
-              searchtermx=strlist(thex0,thex1)
-              searchtermy=strlist(they0,they1)
+
               
           if '⬇️' in str(res3.emoji):
               they0,they1=they0-scaley,they1-scaley
               searchtermy=strlist(they0,they1)
               await message.remove_reaction('⬇️',message.author)
-              
-          if '↘️' in str(res3.emoji):
-              thex0,thex1=thex0+scalex,thex1+scalex
-              they0,they1=they0-scaley,they1-scaley
-              searchtermx=strlist(thex0,thex1)
-              searchtermy=strlist(they0,they1)
+
               
           if '🔬' in str(res3.emoji):
               thex0,thex1=(thex0+thex1)/2-(1/zoomf)*(thex1-thex0)/2,(thex0+thex1)/2+(1/zoomf)*(thex1-thex0)/2
@@ -395,8 +375,10 @@ async def on_message(message):
 
         xtick=AutomateXYLabels(json.loads(searchtermx)[0],json.loads(searchtermx)[1])
         ytick=AutomateXYLabels(json.loads(searchtermy)[0],json.loads(searchtermy)[1])
-        for ddemo in ['🔄','➡️','⬆️','⬅️','⬇️','🔬','🔭','✅']:
-          await msg3.remove_reaction(emoji= ddemo, member = user3)
+        print(res3.emoji)
+        await msg3.remove_reaction(emoji= res3.emoji, member = user3) 
+        print(searchtermx)
+        print(searchtermy)
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
           
     
@@ -404,7 +386,7 @@ async def on_message(message):
     
 #----------------------------------------------------------
 def graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick):
-  thelink=f"https://graphsketch.com/render.php?eqn1_eqn={searchterm3}&x_min={json.loads(searchtermx)[0]}&x_max={json.loads(searchtermx)[1]}&y_min={json.loads(searchtermy)[0]}&y_max={json.loads(searchtermx)[1]}&image_w={json.loads(searchtermsize)[0]}&image_h={json.loads(searchtermsize)[1]}&do_grid=1&x_tick={xtick}&y_tick={ytick}&x_label_freq=5&y_label_freq=5"
+  thelink=f"https://graphsketch.com/render.php?eqn1_eqn={searchterm3}&x_min={json.loads(searchtermx)[0]}&x_max={json.loads(searchtermx)[1]}&y_min={json.loads(searchtermy)[0]}&y_max={json.loads(searchtermy)[1]}&image_w={json.loads(searchtermsize)[0]}&image_h={json.loads(searchtermsize)[1]}&do_grid=1&x_tick={xtick}&y_tick={ytick}&x_label_freq=5&y_label_freq=5"
   gembed=discord.Embed(title=wholeterm3,description=f"[Open image in a new tab]({thelink})")
   gembed.add_field(name="Graph(s)", value=searchterm3, inline=False)
   gembed.add_field(name="Domain", value=searchtermx, inline=True)
