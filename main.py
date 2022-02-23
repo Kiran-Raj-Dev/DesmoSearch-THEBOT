@@ -140,7 +140,7 @@ async def on_message(message):
     Gnum = 1
     GnumDisplay=0
     infograph=0
-    dachoose=[0,0,0]
+    dachoose=[1,0,0]
     while True:
       if first_run:
           first_run = False
@@ -240,7 +240,51 @@ async def on_message(message):
     thehash01=[ii.group(1) for ii in pattern02.finditer(message.content)][0]
     await message.edit(suppress=True)
     msg2 = await message.channel.send("🔎")
-    await aboutchain(message,thehash01,msg2,[False])
+
+
+    first_run2 = True
+    dachoose2=[1,0,0]
+    while True:
+      if first_run2:
+          first_run2 = False
+          dachoose2[1]=thehash01
+          dachoose2[2]=[thehash01]
+          dachoose2=await aboutchain(message,thehash01,msg2,[True,None,'','',dachoose2])
+
+      reactmoji2=[]
+      
+      reactmoji2.append('✅')
+      if str(message.author.id)=='686012491607572515':
+         reactmoji2.append('❌')
+
+
+      for react2 in reactmoji2:
+          await msg2.add_reaction(react2)
+          
+
+      def check_react(reaction, user):
+          if reaction.message.id != msg2.id:
+              return False
+          if user != message.author:
+              return False
+          if str(reaction.emoji) not in reactmoji2 and str(reaction.emoji) not in ['👈','👉','🖱️']:
+              return False
+          return True
+
+      try:
+          res2, user2 = await client.wait_for('reaction_add', timeout=100.0, check=check_react)
+      except asyncio.TimeoutError:
+          return await msg2.clear_reactions()
+      if user2 != message.author:
+          pass
+      elif '✅' in str(res2.emoji):
+          return await msg2.clear_reactions()
+      elif '❌' in str(res2.emoji):
+          await message.delete()
+          return await msg2.delete()
+      elif '🖱️' in str(res2.emoji) or '👈' in str(res2.emoji) or '👉' in str(res2.emoji):
+          dachoose2=await aboutchain(message,thehash01,msg2,[True,None,res2,user2,dachoose2])
+
 
   elif message.content=="!dhelp":
     await getready(message)
@@ -444,14 +488,16 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
   elif '👈' in str(res2.emoji):
       choose=choose-1
   elif '🖱️' in str(res2.emoji):
-    newhash=subgraphs[choose]
+    print(subgraphs)
+    newhash=subgraphs[choose%len(subgraphs)]
     choose=1
     historylist.append(newhash)
     subgraphs=[newhash]
-  
-  await msg2.remove_reaction(emoji= "👉", member = user2)
-  await msg2.remove_reaction(emoji= "👈", member = user2)
-  await msg2.remove_reaction(emoji= "🖱️", member = user2)
+
+  if res2!='' and user2!='':
+    await msg2.remove_reaction(emoji= "👉", member = user2)
+    await msg2.remove_reaction(emoji= "👈", member = user2)
+    await msg2.remove_reaction(emoji= "🖱️", member = user2)
   await msg2.edit(embed=aboutembed(message,newhash,fromSearch,subgraphs[choose%len(subgraphs)],historylist),content='')
 
   return ([choose,newhash,historylist])
@@ -477,13 +523,15 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
 
 
-  if fromSearch[0]:
+  if fromSearch[0] and fromSearch[1] is not None:
     pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
     searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
     ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
     embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"\n"+'→'.join(historylist))
-  else:
-    embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash)
+  elif fromSearch[0] and fromSearch[1] is None:
+    pattern020=re.compile(r"!https:\/\/www.desmos.com\/calculator\/([a-z0-9]{10})")
+    thehash010=[ii.group(1) for ii in pattern020.finditer(message.content)][0]
+    embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash010+'\n'+'→'.join(historylist))
   
   if dainfo['parent_hash'] is not None:
     embed.add_field(name="Parent Graph", value=("__"+dainfo['parent_hash']+"__" if dainfo['parent_hash']==underline else dainfo['parent_hash']), inline=True)
