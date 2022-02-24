@@ -12,6 +12,8 @@ Flask = "^2.0.3"
 discord = "^1.7.3"
 discord-py-slash-command = "^3.0.3"
 bs4 = "^0.0.1"
+maya = "^0.6.1"
+treelib = "^1.6.1"
 
 [tool.poetry.dev-dependencies]
 

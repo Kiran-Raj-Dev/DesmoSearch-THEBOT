@@ -19,6 +19,10 @@ import math
 from urllib.request import urlopen
 from bs4 import BeautifulSoup
 import html
+import maya
+from treelib import Node, Tree
+
+
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
 '''
@@ -39,6 +43,7 @@ GraphsList=db['GraphsList']
 objowner=db['objowner']
 noofresults=5;
 
+
 client = commands.Bot(command_prefix="_")
 #slash = SlashCommand(client, sync_commands=True)
 token = os.environ.get("DISCORD_BOT_SECRET")
@@ -51,7 +56,7 @@ async def on_ready():
 async def on_message(message): 
   pattern=re.compile(r"!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?")
   x=pattern.finditer(message.content)
-  pattern02=re.compile(r"!https:\/\/www.desmos.com\/calculator\/([a-z0-9]{10})")
+  pattern02=re.compile(r"!https:\/\/www.desmos.com\/calculator\/((?:[a-z0-9]{20})|(?:[a-z0-9]{10}))")
   x02=pattern02.finditer(message.content)
   pattern03=re.compile(r"(!graph ([^?]+)(?: *\?(?:(x|y|size)(?:=(\[.*?,.*?\]))?)(?:&(x|y|size)(?:=(\[.*?,.*?\]))?)?(?:&(x|y|size)(?:=(\[.*?,.*?\]))?)?)?)")
   x03=pattern03.finditer(message.content)
@@ -424,6 +429,8 @@ async def on_message(message):
         print(searchtermx)
         print(searchtermy)
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
+  elif message.content=="!destree":
+    await message.channel.send(embed=discord.Embed(title='Desmos Tree of Graphs',description=gtree))
           
     
 
@@ -504,11 +511,12 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
 
 def aboutembed(message,thehash,fromSearch,underline,historylist):
   dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
-  embed = discord.Embed(color=0x19212d, title=dainfo['title'],description="https://www.desmos.com/calculator/"+thehash)
+  embed = discord.Embed(color=0x12793e, title=dainfo['title'],description="https://www.desmos.com/calculator/"+thehash)
   embed.set_image(url=dainfo['thumbUrl'])
   if objowner.get(str(thehash),None) is not None:
     embed.add_field(name="Possible Author", value=objowner.get(str(thehash),None), inline=False)
-  embed.add_field(name="Date Created", value="```"+dainfo['created']+"```", inline=True)
+  
+  embed.add_field(name="Date Created", value="<t:"+str(round(maya.parse(dainfo['created']).datetime().timestamp()))+":F>", inline=True)
   embed.add_field(name="Version", value="```"+str(dainfo['version'])+"```", inline=True)
   if len([] if dainfo['notes'] is None else dainfo['notes'])>0 and len(str(dainfo['notes']))<=1020:
     embed.add_field(name="Notes", value="".join(f"\n{iii+1}. [#{str(dainfo['notes'][iii]['id'])}]{(dainfo['notes'][iii]['text'])}" for iii in range(len(dainfo['notes']))), inline=False)
@@ -529,7 +537,7 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
     ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
     embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"\n"+'→'.join(historylist))
   elif fromSearch[0] and fromSearch[1] is None:
-    pattern020=re.compile(r"!https:\/\/www.desmos.com\/calculator\/([a-z0-9]{10})")
+    pattern020=re.compile(r"!https:\/\/www.desmos.com\/calculator\/((?:[a-z0-9]{20})|(?:[a-z0-9]{10}))")
     thehash010=[ii.group(1) for ii in pattern020.finditer(message.content)][0]
     embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash010+'\n'+'→'.join(historylist))
   
@@ -569,7 +577,7 @@ def createembed(Gnum,num,result,max_page,message):
   
   pattern2=re.compile(r"!desmos (([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
   searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
-  embed = discord.Embed(color=0x19212d, title=str(len(result))+" graphs for \""+searchterm+"\"",description=thedescription)
+  embed = discord.Embed(color=0x12793e, title=str(len(result))+" graphs for \""+searchterm+"\"",description=thedescription)
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
   embed.set_footer(text="Page: "+str(num)+"/"+str(max_page))
   if Gnum>-1:
@@ -605,23 +613,6 @@ def AutomateXYLabels(first,second):
   XLabel=XLabelList[LeastDiff.index(min(LeastDiff))]
   return (XLabel/5)
 
-def getinfo0(url):
-  fp = urllib.request.urlopen(url)
-  mybytes = fp.read()
-  
-  mystr = mybytes.decode("utf8")
-  fp.close()
-  patternparent = re.compile(r"quot;parent_hash&quot;:&quot;([a-z0-9]{10,20})&quot;")
-  parentGraph=None if len(list(patternparent.finditer(mystr)))==0 else [ii.group(1) for ii in patternparent.finditer(mystr)][0]
-  patterndate = re.compile(r"created&quot;:&quot;(.*?)&quot")
-  dateofGraph=[ii.group(1) for ii in patterndate.finditer(mystr)][0]
-  patternnote = re.compile(r"&quot;text&quot;:&quot;(.*?)&quot")
-  notes=None if len(list(patternnote.finditer(mystr)))==0 else [ii.group(1) for ii in patternnote.finditer(mystr)]
-  patternfolder = re.compile(r"&quot;type&quot;:&quot;folder&quot;,&quot;id&quot;:&quot;[0-9]*&quot;,&quot;title&quot;:&quot;(.*?)&quot;")
-  folders=None if len(list(patternfolder.finditer(mystr)))==0 else [ii.group(1) for ii in patternfolder.finditer(mystr)]
-  patternvar = re.compile(r";(.(?:_{?\w*}?)?)=")
-  variables=None if len(list(patternvar.finditer(mystr)))==0 else [ii.group(1) for ii in patternvar.finditer(mystr)]
-  return {"parentGraph":parentGraph,"date":dateofGraph,"folders":folders,"notes":notes,"variables":list(set(variables)),"entire":mystr}
 
 keep_alive()
 client.run(token)
