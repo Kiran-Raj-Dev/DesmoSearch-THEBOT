@@ -20,6 +20,7 @@ import html
 import maya
 from treelib import Node, Tree
 from getinfo import getinfo
+import random
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
 '''
@@ -39,29 +40,17 @@ thetitles=db['thetitles']
 GraphsList=db['GraphsList']
 objowner=db['objowner']
 noofresults=5;
-
-
 TheDates=db['TheDates']
-print(len(TheDates))
-'''for iI in range(len(TheDates),len(GraphsList)):
-  Get=getinfo("https://www.desmos.com/calculator/"+GraphsList[iI])
-  if Get=={}:
-    TheDates.append(164575617400000)
-  else:
-    TheDates.append(round(maya.parse(Get['created']).datetime().timestamp()))
-  db['TheDates']=TheDates'''
 
-ParentListNodes = [x for _,x in sorted(zip(TheDates,ParentGraphsList),key=lambda a: a[0])]
-GraphListNodes = [x for _,x in sorted(zip(TheDates,GraphsList),key=lambda a: a[0])]
-Gtree = Tree()
+'''Gtree = Tree()
 Gtree.create_node("Graphs", "Graphs")
 for iI2 in range(len(GraphsList)):
-  Gtree.create_node(GraphListNodes[iI2],  GraphListNodes[iI2]   , parent='Graphs')
+  Gtree.create_node(GraphsList[iI2],  GraphsList[iI2]   , parent='Graphs')
 print('part 1')
 for iI3 in range(len(GraphsList)):
-  if Gtree.contains(ParentListNodes[iI3]):
-    Gtree.move_node(GraphListNodes[iI3], ParentListNodes[iI3])
-print('treedone')
+  if Gtree.contains(ParentGraphsList[iI3]):
+    Gtree.move_node(GraphsList[iI3], ParentGraphsList[iI3])
+print('treedone')'''
 
 client = commands.Bot(command_prefix="_")
 #slash = SlashCommand(client, sync_commands=True)
@@ -70,6 +59,40 @@ token = os.environ.get("DISCORD_BOT_SECRET")
 @client.event
 async def on_ready():
   await client.change_presence(activity=discord.Game(name=f"on {len(client.guilds)} servers | {db['searches']} searches done!"))
+
+@client.event
+async def on_raw_reaction_add(payload):
+  emoji=payload.emoji
+  user=payload.member
+  messageid=payload.message_id
+  channelid=payload.channel_id
+  channel0 = client.get_channel(channelid)
+  message0 = await channel0.fetch_message(messageid)
+  if user.id==client.user.id:
+    return
+  elif emoji.name=='✅' and user.id==686012491607572515 and channelid==945245411449372702:
+    def combine(gifs0,users0):
+      result = [None]*(len(gifs0)+len(users0))
+      result[1::2]=gifs0
+      result[0::2]=users0
+      return(' , '.join(result))
+    channel = client.get_channel(948482596197777442)
+    gifs=[]
+    users=[]
+    async for msg in channel.history(limit=1):
+      damsg=msg
+      C=(msg.content.replace(" ", "")).split(",")
+      gifs.extend(C[1::2])
+      users.extend(C[0::2])
+    ###
+    pattern=re.compile(r"((http(s?):)([/|.|\w|\s|-])*\.(?:jpg|gif|png))")
+    gifs2=([mm.url for mm in message0.attachments]+[ii.group(1) for ii in pattern.finditer(message0.content)])
+    users2=[str(message0.author.id) for i in range(len(gifs2))]
+    if len(combine(gifs+gifs2,users+users2))<2000 and damsg.author.id==944269890301345884:
+      await damsg.edit(content=combine(gifs+gifs2,users+users2))
+    else:
+      await channel.send(content=combine(gifs2,users2))
+    
 
 @client.event
 async def on_message(message): 
@@ -82,80 +105,80 @@ async def on_message(message):
   if message.author == client.user:
     return
   elif len(list(x))==1:
-    await getready(message)
-    
-    searchterm=[ii.group(1) for ii in pattern.finditer(message.content)][0]
-    parameterterm = [[ii.group(iii) for ii in pattern.finditer(message.content)][0] for iii in [2,4,6]]
-    searchterm1=[ii.group(3) for ii in pattern.finditer(message.content)][0]
-    searchterm2=[ii.group(5) for ii in pattern.finditer(message.content)][0]
-    searchterm3=[ii.group(7) for ii in pattern.finditer(message.content)][0]
-    if checkIfDuplicates(parameterterm):
-      parameterterm=[None,None,None]
-      searchterm1=""
-      searchterm2=""
-      searchterm3=""
-
-    titlecond = True if parameterterm==[None,None,None] else ('title' in parameterterm)
-    ownercond = True if parameterterm==[None,None,None] else ('owner' in parameterterm)
-    hashcond = True if parameterterm==[None,None,None] else ('hash' in parameterterm)
-    slashcheckterm,slashcheck1,slashcheck2,slashcheck3=False,False,False,False
-    if "/" in searchterm:
-      searchterm=searchterm[1:-1]
-      slashcheckterm=True
-    else:
-      searchterm=searchterm.lower()
-    if searchterm1 is None:
-      searchterm1 = ""
-    elif "/" in searchterm1:
-      searchterm1=searchterm1[1:-1]
-      slashcheck1=True
-    else:
-      searchterm1=searchterm1.lower()
-    if searchterm2 is None:
-      searchterm2 = ""
-    elif "/" in searchterm2:
-      searchterm2=searchterm2[1:-1]
-      slashcheck2=True
-    else:
-      searchterm2=searchterm2.lower()
-    if searchterm3 is None:
-      searchterm3 = ""
-    elif "/" in searchterm3:
-      searchterm3=searchterm3[1:-1]
-      slashcheck3=True
-    else:
-      searchterm3=searchterm3.lower()
-    
-    print(f'"{searchterm}"')
-
-    searchterm0sub=[searchterm1,searchterm2,searchterm3]
-    slashchecks=[slashcheck1,slashcheck2,slashcheck3]
-    searchtermtitle, searchtermhash, searchtermowner = "", "", "" 
-    slashtitlecheck, slashhashcheck, slashownercheck = False,False,False
-    try:
-      searchtermtitle=searchterm0sub[parameterterm.index('title')]
-      slashtitlecheck=slashchecks[parameterterm.index('title')]
-    except ValueError:
-      searchtermtitle=""
-    try:
-      searchtermhash=searchterm0sub[parameterterm.index('hash')]
-      slashhashcheck=slashchecks[parameterterm.index('hash')]
-    except ValueError:
-      searchtermhash=""
-    try:
-      searchtermowner=searchterm0sub[parameterterm.index('owner')]
-      slashownercheck=slashchecks[parameterterm.index('owner')]
-    except ValueError:
-      searchtermowner=""
+    msg = await message.channel.send(embed=await getready(message))
+    async with message.channel.typing():
+      searchterm=[ii.group(1) for ii in pattern.finditer(message.content)][0]
+      parameterterm = [[ii.group(iii) for ii in pattern.finditer(message.content)][0] for iii in [2,4,6]]
+      searchterm1=[ii.group(3) for ii in pattern.finditer(message.content)][0]
+      searchterm2=[ii.group(5) for ii in pattern.finditer(message.content)][0]
+      searchterm3=[ii.group(7) for ii in pattern.finditer(message.content)][0]
+      if checkIfDuplicates(parameterterm):
+        parameterterm=[None,None,None]
+        searchterm1=""
+        searchterm2=""
+        searchterm3=""
+  
+      titlecond = True if parameterterm==[None,None,None] else ('title' in parameterterm)
+      ownercond = True if parameterterm==[None,None,None] else ('owner' in parameterterm)
+      hashcond = True if parameterterm==[None,None,None] else ('hash' in parameterterm)
+      slashcheckterm,slashcheck1,slashcheck2,slashcheck3=False,False,False,False
+      if "/" in searchterm:
+        searchterm=searchterm[1:-1]
+        slashcheckterm=True
+      else:
+        searchterm=searchterm.lower()
+      if searchterm1 is None:
+        searchterm1 = ""
+      elif "/" in searchterm1:
+        searchterm1=searchterm1[1:-1]
+        slashcheck1=True
+      else:
+        searchterm1=searchterm1.lower()
+      if searchterm2 is None:
+        searchterm2 = ""
+      elif "/" in searchterm2:
+        searchterm2=searchterm2[1:-1]
+        slashcheck2=True
+      else:
+        searchterm2=searchterm2.lower()
+      if searchterm3 is None:
+        searchterm3 = ""
+      elif "/" in searchterm3:
+        searchterm3=searchterm3[1:-1]
+        slashcheck3=True
+      else:
+        searchterm3=searchterm3.lower()
       
-
-    searchtermpart = lambda data00 : data00 if slashcheckterm else data00.lower()
-    searchterm0 = searchtermpart(searchterm)
-    titlepart = lambda data00 : data00 if slashtitlecheck else data00.lower()
-    hashpart = lambda data00 : data00 if slashhashcheck else data00.lower()
-    ownerpart = lambda data00 : data00 if slashownercheck else data00.lower()
-    
-    searchresult = [hash for hash, title in thetitles.items() if (titlecond*bool(re.search(searchterm0, searchtermpart(str(title)))) or hashcond*bool(re.search(searchterm0, str(hash))) or ownercond*bool(re.search(searchterm0, searchtermpart(str(objowner.get(str(hash),None)))))) and (bool(re.search(titlepart(searchtermtitle), titlepart(str(title)))) and bool(re.search(hashpart(searchtermhash), hashpart(str(hash)))) and bool(re.search(ownerpart(searchtermowner), ownerpart(str(objowner.get(str(hash),None))))))]
+      print(f'"{searchterm}"')
+  
+      searchterm0sub=[searchterm1,searchterm2,searchterm3]
+      slashchecks=[slashcheck1,slashcheck2,slashcheck3]
+      searchtermtitle, searchtermhash, searchtermowner = "", "", "" 
+      slashtitlecheck, slashhashcheck, slashownercheck = False,False,False
+      try:
+        searchtermtitle=searchterm0sub[parameterterm.index('title')]
+        slashtitlecheck=slashchecks[parameterterm.index('title')]
+      except ValueError:
+        searchtermtitle=""
+      try:
+        searchtermhash=searchterm0sub[parameterterm.index('hash')]
+        slashhashcheck=slashchecks[parameterterm.index('hash')]
+      except ValueError:
+        searchtermhash=""
+      try:
+        searchtermowner=searchterm0sub[parameterterm.index('owner')]
+        slashownercheck=slashchecks[parameterterm.index('owner')]
+      except ValueError:
+        searchtermowner=""
+        
+  
+      searchtermpart = lambda data00 : data00 if slashcheckterm else data00.lower()
+      searchterm0 = searchtermpart(searchterm)
+      titlepart = lambda data00 : data00 if slashtitlecheck else data00.lower()
+      hashpart = lambda data00 : data00 if slashhashcheck else data00.lower()
+      ownerpart = lambda data00 : data00 if slashownercheck else data00.lower()
+      
+      searchresult = [hash for hash, title in thetitles.items() if (titlecond*bool(re.search(searchterm0, searchtermpart(str(title)))) or hashcond*bool(re.search(searchterm0, str(hash))) or ownercond*bool(re.search(searchterm0, searchtermpart(str(objowner.get(str(hash),None)))))) and (bool(re.search(titlepart(searchtermtitle), titlepart(str(title)))) and bool(re.search(hashpart(searchtermhash), hashpart(str(hash)))) and bool(re.search(ownerpart(searchtermowner), ownerpart(str(objowner.get(str(hash),None))))))]
 
     #https://gist.github.com/noaione/58cdd25a1cc19388021deb0a77582c97
     max_page=math.ceil(len(searchresult)/noofresults)
@@ -168,7 +191,7 @@ async def on_message(message):
     while True:
       if first_run:
           first_run = False
-          msg = await message.channel.send(embed=createembed(-1,num,searchresult,max_page,message))
+          await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
 
       reactmoji = []
 
@@ -259,11 +282,10 @@ async def on_message(message):
           
   elif len(list(x02))==1:
     
-    await getready(message)
     
     thehash01=[ii.group(1) for ii in pattern02.finditer(message.content)][0]
     await message.edit(suppress=True)
-    msg2 = await message.channel.send("🔎")
+    msg2 = await message.channel.send(embed=await getready(message))
 
 
     first_run2 = True
@@ -315,8 +337,9 @@ async def on_message(message):
     helpembed=discord.Embed(title="Commands",description="!dhelp, !desmos, ![+desmoslink]")
     helpembed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
     await message.channel.send(embed=helpembed,content='')
+    
   elif len(list(x03))==1:
-    await getready(message)
+    msg3 = await message.channel.send(embed=await getready(message))
     
     wholeterm3=[ii.group(1) for ii in pattern03.finditer(message.content)][0]
     searchterm3=[ii.group(2) for ii in pattern03.finditer(message.content)][0]
@@ -361,7 +384,7 @@ async def on_message(message):
         if first_run3:
             reactmoji3.extend(['🔄','➡️','⬆️','⬅️','⬇️','🔬','🔭','✅'])
             first_run3 = False
-            msg3 = await message.channel.send(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
+            await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
           
         thex0=json.loads(searchtermx)[0]
         thex1=json.loads(searchtermx)[1]
@@ -447,13 +470,40 @@ async def on_message(message):
         print(searchtermx)
         print(searchtermy)
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
-  elif message.content=="!destree":
-    await message.channel.send(embed=discord.Embed(title='Desmos Tree of Graphs',description=Gtree))
+  elif message.content=="!loading":
+    await message.channel.send(embed=await getready(message))
           
     
 
     
 #----------------------------------------------------------
+async def getready(message):
+  db['searches']=db['searches']+1
+  await on_ready()
+  await dmsend(repr(message)+"\n\n"+message.content)
+  return await loadinggif(message)
+
+async def dmsend(msg):
+    user = await client.fetch_user("686012491607572515")
+    await DMChannel.send(user,"```"+msg+"```")
+
+async def loadinggif(msg0):
+  channel = client.get_channel(948482596197777442)
+  gifs=[]
+  users=[]
+  async for msg in channel.history(limit=10000):
+    C=(msg.content.replace(" ", "")).split(",")
+    gifs.extend(C[1::2])
+    users.extend(C[0::2])
+  selectR=random.randint(0,len(gifs)-1)
+  user = await client.fetch_user(str(users[selectR]))
+  embed=discord.Embed(title='Loading...') 
+  embed.set_author(name='Gif by '+str(user), icon_url=user.avatar_url)
+  embed.set_image(url=gifs[selectR])
+  embed.set_footer(text='Shared in #looping-gifs in the https://dsc.gg/me314 discord server')
+  return embed
+    
+##########
 def graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick):
   thelink=f"https://graphsketch.com/render.php?eqn1_eqn={searchterm3}&x_min={json.loads(searchtermx)[0]}&x_max={json.loads(searchtermx)[1]}&y_min={json.loads(searchtermy)[0]}&y_max={json.loads(searchtermy)[1]}&image_w={json.loads(searchtermsize)[0]}&image_h={json.loads(searchtermsize)[1]}&do_grid=1&x_tick={xtick}&y_tick={ytick}&x_label_freq=5&y_label_freq=5"
   gembed=discord.Embed(title=wholeterm3,description=f"[Open image in a new tab]({thelink})")
@@ -465,24 +515,20 @@ def graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchterm
   gembed.set_image(url=thelink)
   return gembed
 
-  
-async def getready(message):
-  db['searches']=db['searches']+1
-  await on_ready()
-  await dmsend(repr(message)+"\n\n"+message.content)
-  
+#######
 async def aboutchain(message,thehash01,msg2,fromSearch):
-  newhash=fromSearch[4][1] if fromSearch[0] else thehash01
-  historylist=fromSearch[4][2] if fromSearch[0] else [thehash01]
-  theinfo = getinfo("https://www.desmos.com/calculator/"+newhash)
-  subgraphs = []
-  if theinfo['parent_hash'] is not None:
-    subgraphs.append(theinfo['parent_hash'])
-  choose = fromSearch[4][0] if fromSearch[4][0] is not None else len(subgraphs)
-  subgraphs.append(newhash)
-  thevalue=','.join([GraphsList[i] for i in range(len(GraphsList)) if (newhash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
-  if thevalue!="":
-    subgraphs.extend(thevalue.split(','))
+  async with message.channel.typing():
+    newhash=fromSearch[4][1] if fromSearch[0] else thehash01
+    historylist=fromSearch[4][2] if fromSearch[0] else [thehash01]
+    theinfo = getinfo("https://www.desmos.com/calculator/"+newhash)
+    subgraphs = []
+    if theinfo['parent_hash'] is not None:
+      subgraphs.append(theinfo['parent_hash'])
+    choose = fromSearch[4][0] if fromSearch[4][0] is not None else len(subgraphs)
+    subgraphs.append(newhash)
+    thevalue=','.join([GraphsList[i] for i in range(len(GraphsList)) if (newhash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+    if thevalue!="":
+      subgraphs.extend(thevalue.split(','))
 
   reactmoji2 = []
 
@@ -530,7 +576,8 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
 def aboutembed(message,thehash,fromSearch,underline,historylist):
   dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
   embed = discord.Embed(color=0x12793e, title=dainfo['title'],description="https://www.desmos.com/calculator/"+thehash)
-  embed.set_image(url=dainfo['thumbUrl'])
+  if 'thumbUrl' in dainfo.keys():
+    embed.set_image(url=dainfo['thumbUrl'])
   if objowner.get(str(thehash),None) is not None:
     embed.add_field(name="Possible Author", value=objowner.get(str(thehash),None), inline=False)
   
@@ -550,6 +597,7 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
 
 #history
   graphnodes=[]
+  parentnodes=[]
   for newhash in historylist:
     theinfo0 = getinfo("https://www.desmos.com/calculator/"+newhash)
     if theinfo0['parent_hash'] is not None:
@@ -559,23 +607,18 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
     if thevalue0!="":
       graphnodes.extend(thevalue0.split(','))
   graphnodes=list(set(graphnodes))
-  Thedates=[]
-  parentnodes=[]
   for iI in range(len(graphnodes)):
     Get=getinfo("https://www.desmos.com/calculator/"+graphnodes[iI])
-    Thedates.append(maya.parse(Get['created']))
     parentnodes.append(Get['parent_hash'])
-  ParentNodes = [x for _,x in sorted(zip(Thedates,parentnodes))]
-  GraphNodes = [x for _,x in sorted(zip(Thedates,graphnodes))]
   gtree = Tree()
   gtree.create_node("Graphs", "Graphs")
   for iI2 in range(len(graphnodes)):
-    gtree.create_node(GraphNodes[iI2],  GraphNodes[iI2]   , parent='Graphs')
+    gtree.create_node(graphnodes[iI2],  graphnodes[iI2]   , parent='Graphs')
   for iI3 in range(len(graphnodes)):
-    if gtree.contains(ParentNodes[iI3]):
-      gtree.move_node(GraphNodes[iI3], ParentNodes[iI3])
-  gtree=str(gtree.show(line_type="ascii-ex",stdout=False)).replace(" ","⠀")
-  gtree=(gtree).replace(underline,"__**"+underline+"**__")
+    if gtree.contains(parentnodes[iI3]):
+      gtree.move_node(graphnodes[iI3], parentnodes[iI3])
+  gtree=str(gtree.show(line_type="ascii-ex",stdout=False))
+  gtree='```ini\n'+(gtree).replace(underline,"["+underline+"]")+'```'
 
     
   if fromSearch[0] and fromSearch[1] is not None:
@@ -618,11 +661,6 @@ def createembed(Gnum,num,result,max_page,message):
     
     #embed.add_field(name="Date Created", value=dainfo['date'], inline=False)
   return embed
-  
-async def dmsend(msg):
-    user = await client.fetch_user("686012491607572515")
-    await DMChannel.send(user,"```"+msg+"```")
-
 
 def checkIfDuplicates(listOfElems):
     ''' Check if given list contains any duplicates '''
