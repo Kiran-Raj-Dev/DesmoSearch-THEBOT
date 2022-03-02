@@ -16,13 +16,10 @@ import re
 from replit import db
 import asyncio
 import math
-from urllib.request import urlopen
-from bs4 import BeautifulSoup
 import html
 import maya
 from treelib import Node, Tree
-
-
+from getinfo import getinfo
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
 '''
@@ -43,6 +40,28 @@ GraphsList=db['GraphsList']
 objowner=db['objowner']
 noofresults=5;
 
+
+TheDates=db['TheDates']
+print(len(TheDates))
+'''for iI in range(len(TheDates),len(GraphsList)):
+  Get=getinfo("https://www.desmos.com/calculator/"+GraphsList[iI])
+  if Get=={}:
+    TheDates.append(164575617400000)
+  else:
+    TheDates.append(round(maya.parse(Get['created']).datetime().timestamp()))
+  db['TheDates']=TheDates'''
+
+ParentListNodes = [x for _,x in sorted(zip(TheDates,ParentGraphsList),key=lambda a: a[0])]
+GraphListNodes = [x for _,x in sorted(zip(TheDates,GraphsList),key=lambda a: a[0])]
+Gtree = Tree()
+Gtree.create_node("Graphs", "Graphs")
+for iI2 in range(len(GraphsList)):
+  Gtree.create_node(GraphListNodes[iI2],  GraphListNodes[iI2]   , parent='Graphs')
+print('part 1')
+for iI3 in range(len(GraphsList)):
+  if Gtree.contains(ParentListNodes[iI3]):
+    Gtree.move_node(GraphListNodes[iI3], ParentListNodes[iI3])
+print('treedone')
 
 client = commands.Bot(command_prefix="_")
 #slash = SlashCommand(client, sync_commands=True)
@@ -230,8 +249,8 @@ async def on_message(message):
       elif '🔎' in str(res.emoji):
           infograph=1-infograph
           await msg.clear_reactions()
-          dachoose[1]=searchresult[Gnum-1]
-          dachoose[2]=[searchresult[Gnum-1]]
+          dachoose=[None,searchresult[Gnum-1],[searchresult[Gnum-1]]]
+
       
       if infograph==1:
         dachoose=await aboutchain(message,searchresult[Gnum-1],msg,[True,Gnum,res,user,dachoose])
@@ -252,8 +271,7 @@ async def on_message(message):
     while True:
       if first_run2:
           first_run2 = False
-          dachoose2[1]=thehash01
-          dachoose2[2]=[thehash01]
+          dachoose2=[None,thehash01,[thehash01]]
           dachoose2=await aboutchain(message,thehash01,msg2,[True,None,'','',dachoose2])
 
       reactmoji2=[]
@@ -430,7 +448,7 @@ async def on_message(message):
         print(searchtermy)
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
   elif message.content=="!destree":
-    await message.channel.send(embed=discord.Embed(title='Desmos Tree of Graphs',description=gtree))
+    await message.channel.send(embed=discord.Embed(title='Desmos Tree of Graphs',description=Gtree))
           
     
 
@@ -460,17 +478,14 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
   subgraphs = []
   if theinfo['parent_hash'] is not None:
     subgraphs.append(theinfo['parent_hash'])
-  choose = fromSearch[4][0] if fromSearch[0] else len(subgraphs)
+  choose = fromSearch[4][0] if fromSearch[4][0] is not None else len(subgraphs)
   subgraphs.append(newhash)
   thevalue=','.join([GraphsList[i] for i in range(len(GraphsList)) if (newhash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
   if thevalue!="":
     subgraphs.extend(thevalue.split(','))
 
   reactmoji2 = []
-  reactmoji2.extend(['👈','👉','🖱️'])
 
-  for react in reactmoji2:
-      await msg2.add_reaction(react)
 
   def check_react(reaction, user):
       if reaction.message.id != msg2.id:
@@ -495,7 +510,6 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
   elif '👈' in str(res2.emoji):
       choose=choose-1
   elif '🖱️' in str(res2.emoji):
-    print(subgraphs)
     newhash=subgraphs[choose%len(subgraphs)]
     choose=1
     historylist.append(newhash)
@@ -506,6 +520,10 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
     await msg2.remove_reaction(emoji= "👈", member = user2)
     await msg2.remove_reaction(emoji= "🖱️", member = user2)
   await msg2.edit(embed=aboutembed(message,newhash,fromSearch,subgraphs[choose%len(subgraphs)],historylist),content='')
+  reactmoji2.extend(['👈','👉','🖱️'])
+
+  for react in reactmoji2:
+      await msg2.add_reaction(react)
 
   return ([choose,newhash,historylist])
 
@@ -530,7 +548,36 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
     embed.add_field(name="Variables", value="```"+"Contains "+str(len(dainfo['variables']))+" variables"+"```", inline=False)
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
 
+#history
+  graphnodes=[]
+  for newhash in historylist:
+    theinfo0 = getinfo("https://www.desmos.com/calculator/"+newhash)
+    if theinfo0['parent_hash'] is not None:
+      graphnodes.append(theinfo0['parent_hash'])
+    graphnodes.append(newhash)
+    thevalue0=','.join([GraphsList[i] for i in range(len(GraphsList)) if (newhash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+    if thevalue0!="":
+      graphnodes.extend(thevalue0.split(','))
+  graphnodes=list(set(graphnodes))
+  Thedates=[]
+  parentnodes=[]
+  for iI in range(len(graphnodes)):
+    Get=getinfo("https://www.desmos.com/calculator/"+graphnodes[iI])
+    Thedates.append(maya.parse(Get['created']))
+    parentnodes.append(Get['parent_hash'])
+  ParentNodes = [x for _,x in sorted(zip(Thedates,parentnodes))]
+  GraphNodes = [x for _,x in sorted(zip(Thedates,graphnodes))]
+  gtree = Tree()
+  gtree.create_node("Graphs", "Graphs")
+  for iI2 in range(len(graphnodes)):
+    gtree.create_node(GraphNodes[iI2],  GraphNodes[iI2]   , parent='Graphs')
+  for iI3 in range(len(graphnodes)):
+    if gtree.contains(ParentNodes[iI3]):
+      gtree.move_node(GraphNodes[iI3], ParentNodes[iI3])
+  gtree=str(gtree.show(line_type="ascii-ex",stdout=False)).replace(" ","⠀")
+  gtree=(gtree).replace(underline,"__**"+underline+"**__")
 
+    
   if fromSearch[0] and fromSearch[1] is not None:
     pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
     searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
@@ -542,33 +589,16 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
     embed.set_footer(text='!https://www.desmos.com/calculator/'+thehash010+'\n'+'→'.join(historylist))
   
   if dainfo['parent_hash'] is not None:
-    embed.add_field(name="Parent Graph", value=("__"+dainfo['parent_hash']+"__" if dainfo['parent_hash']==underline else dainfo['parent_hash']), inline=True)
-  embed.add_field(name="Current Graph", value=("__"+thehash+"__" if thehash==underline else thehash), inline=True)
-  davalue=' , '.join([("__"+GraphsList[i]+"__" if GraphsList[i]==underline else GraphsList[i]) for i in range(len(GraphsList)) if (thehash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
+    embed.add_field(name="Parent Graph", value=("__**"+dainfo['parent_hash']+"**__" if dainfo['parent_hash']==underline else dainfo['parent_hash']), inline=True)
+  embed.add_field(name="Current Graph", value=("__**"+thehash+"**__" if thehash==underline else thehash), inline=True)
+  davalue=' , '.join([("__**"+GraphsList[i]+"**__" if GraphsList[i]==underline else GraphsList[i]) for i in range(len(GraphsList)) if (thehash in str(ParentGraphsList[i]) and ParentGraphsList[i] is not None)])
   if davalue!="":
     embed.add_field(name="Child Graphs", value=davalue, inline=True)
+  embed.add_field(name="Des[sub]Tree", value=gtree, inline=False)
   
   return embed
 
-def getinfo(hashurl):
-  html = urlopen(hashurl).read()
-  soup = BeautifulSoup(html, features="html.parser")
-  finaldict={}
-  
-  for key in ['hash','parent_hash','thumbUrl','stateUrl','title','access','created']:
-    finaldict[key]=json.loads(soup.body['data-load-data'])['graph'][key]
-  finaldict['version']='null'
-  dastate=json.loads(soup.body['data-load-data'])['graph']['state']
-  if 'version' in dastate.keys():
-    finaldict['version']=dastate['version']
-  expr=dastate['expressions']['list']
-  finaldict['expressions'] = expr
-  finaldict['notes'], finaldict['folders']=[],[]
-  finaldict['notes']=[expr[i] for i in range(len(expr)) if expr[i]['type' if 'type' in expr[i] else 'id']=='text']
-  finaldict['folders']=[expr[i] for i in range(len(expr)) if expr[i]['type' if 'type' in expr[i] else 'id']=='folder']
-  patternvar = re.compile(r"([A-Za-z](?:_{?\w*}?)?)=")
-  finaldict['variables']=list(set([ii.group(1) for ii in patternvar.finditer(str(expr))]))
-  return (finaldict)
+
 
 ############
 def createembed(Gnum,num,result,max_page,message):
