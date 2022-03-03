@@ -1,25 +1,19 @@
-import base64
 import requests
 from keep_alive import keep_alive
-
 import discord
 from discord.ext import commands
-from discord import guild
 #from discord_slash import SlashCommand, SlashContext
 #from discord_slash.utils.manage_commands import create_choice, create_option
 from discord import DMChannel
 import os
-import requests
 import json
-import time
 import re
 from replit import db
 import asyncio
 import math
-import html
 import maya
 from treelib import Node, Tree
-from getinfo import getinfo
+from getinfo import getinfo, difference
 import random
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
@@ -522,6 +516,8 @@ async def on_message(message):
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
   elif message.content=="!loading":
     await message.channel.send(embed=await getready(message))
+  elif message.content=="sauce?":
+    await message.channel.send('https://cdn.discordapp.com/attachments/709918138342572093/948783164518699078/bernie.png')
           
     
 
