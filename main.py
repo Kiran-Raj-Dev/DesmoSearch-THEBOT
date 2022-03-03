@@ -92,6 +92,56 @@ async def on_raw_reaction_add(payload):
       await damsg.edit(content=combine(gifs+gifs2,users+users2))
     else:
       await channel.send(content=combine(gifs2,users2))
+
+  elif emoji.name=='🔭':
+    #code from on_message under the (!desmos link) elif
+    pattern02=re.compile(r"https:\/\/www.desmos.com\/calculator\/((?:[a-z0-9]{20})|(?:[a-z0-9]{10}))")
+    x02=pattern02.finditer(message0.content)
+    if len(list(x02))>0:
+      thehash01=[ii.group(1) for ii in pattern02.finditer(message0.content)][0]
+      msg2 = await message0.reply(embed=await getready(message0),mention_author=False)
+      first_run2 = True
+      dachoose2=[1,0,0]
+      while True:
+        if first_run2:
+            first_run2 = False
+            dachoose2=[None,thehash01,[thehash01]]
+            dachoose2=await aboutchain(message0,thehash01,msg2,[True,-10,'','',dachoose2])
+  
+        reactmoji2=[]
+        
+        reactmoji2.append('✅')
+        if str(message0.author.id)=='686012491607572515':
+           reactmoji2.append('❌')
+  
+  
+        for react2 in reactmoji2:
+            await msg2.add_reaction(react2)
+            
+  
+        def check_react(reaction, user):
+            if reaction.message.id != msg2.id:
+                return False
+            if user != message0.author:
+                return False
+            if str(reaction.emoji) not in reactmoji2 and str(reaction.emoji) not in ['👈','👉','🖱️']:
+                return False
+            return True
+  
+        try:
+            res2, user2 = await client.wait_for('reaction_add', timeout=100.0, check=check_react)
+        except asyncio.TimeoutError:
+            return await msg2.clear_reactions()
+        if user2 != message0.author:
+            pass
+        elif '✅' in str(res2.emoji):
+            return await msg2.clear_reactions()
+        elif '❌' in str(res2.emoji):
+            return await msg2.delete()
+        elif '🖱️' in str(res2.emoji) or '👈' in str(res2.emoji) or '👉' in str(res2.emoji):
+            dachoose2=await aboutchain(message0,thehash01,msg2,[True,-10,res2,user2,dachoose2])
+
+      
     
 
 @client.event
@@ -622,10 +672,15 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
 
     
   if fromSearch[0] and fromSearch[1] is not None:
-    pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
-    searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
-    ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
-    embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"\n"+'→'.join(historylist))
+    if fromSearch[1]==-10:
+      pattern020=re.compile(r"https:\/\/www.desmos.com\/calculator\/((?:[a-z0-9]{20})|(?:[a-z0-9]{10}))")
+      thehash010=[ii.group(1) for ii in pattern020.finditer(message.content)][0]
+      embed.set_footer(text='First desmos url in the message: https://www.desmos.com/calculator/'+thehash010+'\n'+'→'.join(historylist))
+    else:
+      pattern2=re.compile(r"(!desmos ([a-zA-Z0-9 ]{3,}|\/.*?\/)(?: *\?(?:(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?(?:&(title|hash|owner)(?:=([a-zA-Z0-9 ]{3,}|\/.*?\/))?)?)?)")
+      searchterm=[ii2.group(1) for ii2 in pattern2.finditer(message.content)][0]
+      ordinal = lambda n: f'{n}{"tsnrhtdd"[(n//10%10!=1)*(n%10<4)*n%10::4]}'
+      embed.set_footer(text=ordinal(fromSearch[1])+" graph from \""+searchterm+"\"\n"+'→'.join(historylist))
   elif fromSearch[0] and fromSearch[1] is None:
     pattern020=re.compile(r"!https:\/\/www.desmos.com\/calculator\/((?:[a-z0-9]{20})|(?:[a-z0-9]{10}))")
     thehash010=[ii.group(1) for ii in pattern020.finditer(message.content)][0]
