@@ -769,8 +769,10 @@ def aboutembed(message,thehash,fromSearch,underline,historylist):
     embed.add_field(name="Notes", value="".join(f"\n{iii+1}. [#{str(dainfo['notes'][iii]['id'])}]{(dainfo['notes'][iii]['text'])}" for iii in range(len(dainfo['notes']))), inline=False)
   elif len(str(dainfo['notes']))>1020:
     embed.add_field(name="Notes", value="Contains "+str(len(dainfo['notes']))+" notes", inline=False)
-  if len([] if dainfo['folders'] is None else dainfo['folders'])>0:
+  if len([] if dainfo['folders'] is None else dainfo['folders'])>0 and len(str(dainfo['folders']))<=1020:
     embed.add_field(name="Folders", value="".join(f"\n{iii+1}. [#{str(dainfo['folders'][iii]['id'])}]{dainfo['folders'][iii]['title']}" for iii in range(len(dainfo['folders']))), inline=False)
+  elif len(str(dainfo['folders']))>1020:
+    embed.add_field(name="Folders", value="Contains "+str(len(dainfo['folders']))+" folders", inline=False)
   if len([] if dainfo['variables'] is None else dainfo['variables'])>0 and len(str(dainfo['variables']))<=1020:
     embed.add_field(name="Variables", value="```"+' , '.join(dainfo['variables'])+"```", inline=False)
   elif len(str(dainfo['variables']))>1020:
