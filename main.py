@@ -537,10 +537,11 @@ async def on_message(message):
     num4 = 1
     Gnum4 = 1
     GnumDisplay = 0
+    ghash1list=[hash1]
     while True:
       if first_run4:
           first_run4 = False
-          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2))
+          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
     
       reactmoji4 = []
       if max_page4 == 1 and num4 == 1:
@@ -591,28 +592,29 @@ async def on_message(message):
           Gnum4 = (num4-1)*noofresults+1
           GnumDisplay = 0
           await msg4.clear_reactions()
-          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2))
+          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
       elif '⏩' in str(res4.emoji):
           num4 = num4 + 1
           Gnum4 = (num4-1)*noofresults+1
           GnumDisplay = 0
           await msg4.clear_reactions()
-          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2))
+          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
       elif '🔽' in str(res4.emoji):
           Gnum4  = Gnum4 if GnumDisplay==0 else Gnum4+1
           num4 = math.ceil(Gnum4/noofresults)
           GnumDisplay = 1
           await msg4.clear_reactions()
-          await msg4.edit(embed=diffembed(Gnum4,num4,searchresult04,max_page4,message,hash1,hash2))
+          await msg4.edit(embed=diffembed(Gnum4,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
       elif '🔼' in str(res4.emoji):
           Gnum4  = Gnum4 if GnumDisplay==0 else Gnum4-1
           num4 = math.ceil(Gnum4/noofresults)
           GnumDisplay = 1
           await msg4.clear_reactions()
-          await msg4.edit(embed=diffembed(Gnum4,num4,searchresult04,max_page4,message,hash1,hash2))
+          await msg4.edit(embed=diffembed(Gnum4,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
       elif '👈' in str(res4.emoji):
           async with message.channel.typing():
             hash1,hash2=parentofhash1, hash1
+            ghash1list.append(hash1)
             searchresult04=difference(hash1,hash2)
             searchresult4=searchresult04[1]
             parentofhash1=searchresult04[2]
@@ -621,7 +623,7 @@ async def on_message(message):
           GnumDisplay = 0
           max_page4=math.ceil(len(searchresult4)/noofresults)
           await msg4.clear_reactions()
-          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2))
+          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
       elif '✅' in str(res4.emoji):
           return await msg4.clear_reactions()
       elif '❌' in str(res4.emoji):
@@ -632,7 +634,7 @@ async def on_message(message):
     
 
 #-------------------
-def diffembed(Gnum,num,result,max_page,message,graph1,graph2):
+def diffembed(Gnum,num,result,max_page,message,graph1,graph2,ghash1list):
   #from createembed()
   daexps=result[4][noofresults*(num-1):noofresults*num+1]
   thedescription='\n'.join(f'{"⇓⇓⇓" if Gnum==(num-1)*noofresults+i+1 else ""}{(daexps[i])}' for i in range(len(daexps)))
@@ -643,7 +645,7 @@ def diffembed(Gnum,num,result,max_page,message,graph1,graph2):
   else:
     embed = discord.Embed(color=0x12793e, title='/'+graph1+' vs /'+graph2,description=thedescription)
   embed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
-  embed.set_footer(text="Page: "+str(num)+"/"+str(max_page))
+  embed.set_footer(text="Page: "+str(num)+"/"+str(max_page)+'\n'+'←'.join(reversed(['*'+gg+'*' if gg==graph1 else gg for gg in ghash1list])))
   if graph2 is not None:
     embed.add_field(name="Similarity percentage", value=str(round(result[0]*100,2))+'%', inline=False)
   if Gnum>-1:
