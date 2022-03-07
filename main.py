@@ -593,7 +593,7 @@ async def on_message(message):
       elif num4 > 1 and num4 < max_page4:
           reactmoji4.extend(['⏪', '⏩'])
     
-      if len(searchresult4) == 1 and Gnum4 == 1:
+      if len(searchresult4) == 0 and Gnum4 == 1:
           pass
       elif Gnum4 == 1:
           reactmoji4.append('🔽')
@@ -604,6 +604,8 @@ async def on_message(message):
 
       if parentofhash1 is not None:
         reactmoji4.append('👈')
+      if len(ghash1list)>1:
+        reactmoji4.append('👉')
       
       reactmoji4.append('✅')
       if str(message.author.id)=='686012491607572515':
@@ -658,7 +660,20 @@ async def on_message(message):
       elif '👈' in str(res4.emoji):
           async with message.channel.typing():
             hash1,hash2=parentofhash1, hash1
-            ghash1list.append(hash1)
+            if hash1 not in ghash1list:
+              ghash1list.append(hash1)
+            searchresult04=difference(hash1,hash2)
+            searchresult4=searchresult04[1]
+            parentofhash1=searchresult04[2]
+          num4 = 1
+          Gnum4 = 1
+          GnumDisplay = 0
+          max_page4=math.ceil(len(searchresult4)/noofresults)
+          await msg4.clear_reactions()
+          await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+      elif '👉' in str(res4.emoji):
+          async with message.channel.typing():
+            hash1,hash2=ghash1list[-2],ghash1list[-1]
             searchresult04=difference(hash1,hash2)
             searchresult4=searchresult04[1]
             parentofhash1=searchresult04[2]
@@ -684,6 +699,8 @@ def diffembed(Gnum,num,result,max_page,message,graph1,graph2,ghash1list):
   daexps=result[4][noofresults*(num-1):noofresults*num+1]
   thedescription='\n'.join(f'{"⇓⇓⇓" if Gnum==(num-1)*noofresults+i+1 else ""}{(daexps[i])}' for i in range(len(daexps)))
   pattern4=re.compile(r"!\/((?:[a-z0-9]{20})|(?:[a-z0-9]{10}))(?: vs \/((?:[a-z0-9]{20})|(?:[a-z0-9]{10})))?")
+  if len(thedescription)>4000:
+    thedescription = 'Description is greater than 4000 characters.\nSelect expressions using :arrow_down_small: , :arrow_up_small:'
 
   if graph2 is None:
     embed = discord.Embed(color=0x12793e, title='/'+graph1,description=thedescription)
@@ -695,7 +712,7 @@ def diffembed(Gnum,num,result,max_page,message,graph1,graph2,ghash1list):
     embed.add_field(name="Similarity percentage", value=str(round(result[0]*100,2))+'%', inline=False)
   if Gnum>-1:
     dahash=result[1][Gnum-1][8:-3]
-    embed.add_field(name=f"Selected ({result[3][Gnum-1]}):" if graph2 is None else "Selected:", value=result[4][Gnum-1], inline=False)
+    embed.add_field(name=f"Selected ({result[3][Gnum-1]}):" if graph2 is None else "Selected:", value=result[4][Gnum-1] if len(result[4][Gnum-1])<1000 else result[4][Gnum-1][:1000]+'```...', inline=False)
     '''def rremove(match_obj):
       if match_obj.group(1) is not None:
         return ''
