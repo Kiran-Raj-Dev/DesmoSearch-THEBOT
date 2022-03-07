@@ -16,9 +16,7 @@ from treelib import Node, Tree
 from getinfo import getinfo, difference, convert0
 import random
 import difflib
-import pylatexenc
-from pylatexenc.latexencode import unicode_to_latex
-from urllib.parse import quote
+
 
 #https://stackoverflow.com/questions/38491722/reading-a-github-file-using-python-returns-html-tags
 '''
@@ -97,13 +95,16 @@ async def on_raw_reaction_add(payload):
     x02=pattern02.finditer(message0.content)
     if len(list(x02))>0:
       thehash01=[ii.group(1) for ii in pattern02.finditer(message0.content)][0]
+      #
       msg2 = await message0.reply(embed=await getready(message0),mention_author=False)
+      RecMsg = await record(message0)
+      #
       first_run2 = True
-      dachoose2=[1,0,0]
+      dachoose2=[1,0,0,RecMsg]
       while True:
         if first_run2:
             first_run2 = False
-            dachoose2=[None,thehash01,[thehash01]]
+            dachoose2=[None,thehash01,[thehash01],RecMsg]
             dachoose2=await aboutchain(message0,thehash01,msg2,[True,-10,'','',dachoose2])
   
         reactmoji2=[]
@@ -138,6 +139,16 @@ async def on_raw_reaction_add(payload):
             return await msg2.delete()
         elif '🖱️' in str(res2.emoji) or '👈' in str(res2.emoji) or '👉' in str(res2.emoji):
             dachoose2=await aboutchain(message0,thehash01,msg2,[True,-10,res2,user2,dachoose2])
+  elif channelid==950043685754658866:
+    contentarray=message0.content.split('\n')
+    content=('\n'.join(contentarray[0:-2]))[9:]
+    author=contentarray[-2:-1][0][8:].split(';')
+    Mid=contentarray[-1:][0][4:].split(';')
+    Mchannel0 = client.get_channel(int(Mid[0]))
+    Mid0 = await Mchannel0.fetch_message(int(Mid[1]))
+    if emoji.name=='❌':
+      await Mid0.delete()
+      await message0.add_reaction('❌')
 
       
     
@@ -155,7 +166,10 @@ async def on_message(message):
   if message.author == client.user:
     return
   elif len(list(x))==1:
+    #
     msg = await message.channel.send(embed=await getready(message))
+    RecMsg = await record(message)
+    #
     async with message.channel.typing():
       searchterm=[ii.group(1) for ii in pattern.finditer(message.content)][0]
       parameterterm = [[ii.group(iii) for ii in pattern.finditer(message.content)][0] for iii in [2,4,6]]
@@ -237,11 +251,12 @@ async def on_message(message):
     Gnum = 1
     GnumDisplay=0
     infograph=0
-    dachoose=[1,0,0]
+    dachoose=[1,0,0,None]
     while True:
       if first_run:
           first_run = False
           await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
+          RecMsg = await record(msg,RecMsg)
 
       reactmoji = []
 
@@ -295,6 +310,7 @@ async def on_message(message):
           infograph=0
           await msg.clear_reactions()
           await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
+          RecMsg = await record(msg,RecMsg)
       elif '⏩' in str(res.emoji):
           num = num + 1
           Gnum = (num-1)*noofresults+1
@@ -302,18 +318,23 @@ async def on_message(message):
           infograph=0
           await msg.clear_reactions()
           await msg.edit(embed=createembed(-1,num,searchresult,max_page,message))
+          RecMsg = await record(msg,RecMsg)
       elif '🔽' in str(res.emoji):
           Gnum  = Gnum if GnumDisplay==0 else Gnum+1
           GnumDisplay=1
           num = math.ceil(Gnum/noofresults)
           await msg.clear_reactions()
           await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
+          RecMsg = await record(msg,RecMsg)
+          dachoose=[None,searchresult[Gnum-1],[searchresult[Gnum-1]],RecMsg]
       elif '🔼' in str(res.emoji):
           Gnum  = Gnum if GnumDisplay==0 else Gnum-1
           GnumDisplay=1
           num = math.ceil(Gnum/noofresults)
           await msg.clear_reactions()
           await msg.edit(embed=createembed(Gnum,num,searchresult,max_page,message))
+          RecMsg = await record(msg,RecMsg)
+          dachoose=[None,searchresult[Gnum-1],[searchresult[Gnum-1]],RecMsg]
       elif '✅' in str(res.emoji):
           return await msg.clear_reactions()
       elif '❌' in str(res.emoji):
@@ -322,28 +343,35 @@ async def on_message(message):
       elif '🔎' in str(res.emoji):
           infograph=1-infograph
           await msg.clear_reactions()
-          dachoose=[None,searchresult[Gnum-1],[searchresult[Gnum-1]]]
-
+          dachoose=[None,searchresult[Gnum-1],[searchresult[Gnum-1]],RecMsg]
+          if infograph==0:
+            await msg.edit(embed=createembed(-1 if GnumDisplay==0 else Gnum,num,searchresult,max_page,message))
+            RecMsg = await record(msg,RecMsg)
       
       if infograph==1:
         dachoose=await aboutchain(message,searchresult[Gnum-1],msg,[True,Gnum,res,user,dachoose])
-      else:
-        await msg.edit(embed=createembed(-1 if GnumDisplay==0 else Gnum,num,searchresult,max_page,message))
+        RecMsg = dachoose[3]
+
+
           
   elif len(list(x02))==1:
     
     
     thehash01=[ii.group(1) for ii in pattern02.finditer(message.content)][0]
     await message.edit(suppress=True)
+    #
     msg2 = await message.channel.send(embed=await getready(message))
+    RecMsg = await record(message)
+    await RecMsg.edit(suppress=True)
+    #
 
 
     first_run2 = True
-    dachoose2=[1,0,0]
+    dachoose2=[1,0,0,RecMsg]
     while True:
       if first_run2:
           first_run2 = False
-          dachoose2=[None,thehash01,[thehash01]]
+          dachoose2=[None,thehash01,[thehash01],RecMsg]
           dachoose2=await aboutchain(message,thehash01,msg2,[True,None,'','',dachoose2])
 
       reactmoji2=[]
@@ -382,14 +410,20 @@ async def on_message(message):
 
 
   elif message.content=="!dhelp":
+    #
     await getready(message)
+    RecMsg = await record(message)
+    #
     
     helpembed=discord.Embed(title="Commands",description="!dhelp, !desmos, ![+desmoslink]")
     helpembed.set_author(name=str(message.author), icon_url=message.author.avatar_url)
     await message.channel.send(embed=helpembed,content='')
     
   elif len(list(x03))==1:
+    #
     msg3 = await message.channel.send(embed=await getready(message))
+    RecMsg = await record(message)
+    #
     
     wholeterm3=[ii.group(1) for ii in pattern03.finditer(message.content)][0]
     searchterm3=[ii.group(2) for ii in pattern03.finditer(message.content)][0]
@@ -435,6 +469,7 @@ async def on_message(message):
             reactmoji3.extend(['🔄','➡️','⬆️','⬅️','⬇️','🔬','🔭','✅'])
             first_run3 = False
             await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
+            RecMsg = await record(msg3,RecMsg)
           
         thex0=json.loads(searchtermx)[0]
         thex1=json.loads(searchtermx)[1]
@@ -520,12 +555,16 @@ async def on_message(message):
         print(searchtermx)
         print(searchtermy)
         await msg3.edit(embed=graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick))
+        RecMsg = await record(msg3,RecMsg)
   elif message.content=="!loading":
     await message.channel.send(embed=await getready(message))
   elif message.content=="sauce?":
     await message.channel.send('https://cdn.discordapp.com/attachments/709918138342572093/948783164518699078/bernie.png')
   elif len(list(x04))==1:
+    #
     msg4 = await message.channel.send(embed=await getready(message))
+    RecMsg = await record(message)
+    #
     async with message.channel.typing():
       hash1=[ii.group(1) for ii in pattern04.finditer(message.content)][0]
       hash2=[ii.group(2) for ii in pattern04.finditer(message.content)][0]
@@ -542,6 +581,7 @@ async def on_message(message):
       if first_run4:
           first_run4 = False
           await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+          RecMsg = await record(msg4,RecMsg)
     
       reactmoji4 = []
       if max_page4 == 1 and num4 == 1:
@@ -593,24 +633,28 @@ async def on_message(message):
           GnumDisplay = 0
           await msg4.clear_reactions()
           await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+          RecMsg = await record(msg4,RecMsg)
       elif '⏩' in str(res4.emoji):
           num4 = num4 + 1
           Gnum4 = (num4-1)*noofresults+1
           GnumDisplay = 0
           await msg4.clear_reactions()
           await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+          RecMsg = await record(msg4,RecMsg)
       elif '🔽' in str(res4.emoji):
           Gnum4  = Gnum4 if GnumDisplay==0 else Gnum4+1
           num4 = math.ceil(Gnum4/noofresults)
           GnumDisplay = 1
           await msg4.clear_reactions()
           await msg4.edit(embed=diffembed(Gnum4,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+          RecMsg = await record(msg4,RecMsg)
       elif '🔼' in str(res4.emoji):
           Gnum4  = Gnum4 if GnumDisplay==0 else Gnum4-1
           num4 = math.ceil(Gnum4/noofresults)
           GnumDisplay = 1
           await msg4.clear_reactions()
           await msg4.edit(embed=diffembed(Gnum4,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+          RecMsg = await record(msg4,RecMsg)
       elif '👈' in str(res4.emoji):
           async with message.channel.typing():
             hash1,hash2=parentofhash1, hash1
@@ -624,6 +668,7 @@ async def on_message(message):
           max_page4=math.ceil(len(searchresult4)/noofresults)
           await msg4.clear_reactions()
           await msg4.edit(embed=diffembed(-1,num4,searchresult04,max_page4,message,hash1,hash2,ghash1list))
+          RecMsg = await record(msg4,RecMsg)
       elif '✅' in str(res4.emoji):
           return await msg4.clear_reactions()
       elif '❌' in str(res4.emoji):
@@ -686,6 +731,16 @@ async def loadinggif(msg0):
   embed.set_image(url=gifs[selectR])
   embed.set_footer(text='Shared in #looping-gifs in the https://dsc.gg/me314 discord server')
   return embed
+
+async def record(msg0,msg1=''):
+  if msg1 == '':
+    channel = client.get_channel(950332971842404382)
+    return await channel.send(content='content: '+str(msg0.content)+'\nauthor: '+str(msg0.author)+';'+str(msg0.author.id)+'\nid: '+str(msg0.channel.id)+';'+str(msg0.id),embed=(msg0.embeds[0]) if msg0.embeds else None,files=[await f.to_file() for f in msg0.attachments])
+  else:
+    if (msg1.channel.id==950332971842404382):
+      channel001 = client.get_channel(950332992079925288)
+      msg1 = await channel001.send(msg1.jump_url)
+    return await msg1.reply(content='content: '+str(msg0.content)+'\nauthor: '+str(msg0.author)+';'+str(msg0.author.id)+'\nid: '+str(msg0.channel.id)+';'+str(msg0.id),embed=(msg0.embeds[0]) if msg0.embeds else None,files=[await f.to_file() for f in msg0.attachments])
     
 ##########
 def graphembed(message,wholeterm3,searchterm3,searchtermx,searchtermy,searchtermsize,xtick,ytick):
@@ -750,12 +805,19 @@ async def aboutchain(message,thehash01,msg2,fromSearch):
     await msg2.remove_reaction(emoji= "👈", member = user2)
     await msg2.remove_reaction(emoji= "🖱️", member = user2)
   await msg2.edit(embed=aboutembed(message,newhash,fromSearch,subgraphs[choose%len(subgraphs)],historylist),content='')
+  #
+  RecMsg = fromSearch[4][3]
+  if RecMsg is None:
+    RecMsg = await record(msg2)
+  else:
+    RecMsg = await record(msg2,RecMsg)
+  #
   reactmoji2.extend(['👈','👉','🖱️'])
 
   for react in reactmoji2:
       await msg2.add_reaction(react)
 
-  return ([choose,newhash,historylist])
+  return ([choose,newhash,historylist,RecMsg])
 
 def aboutembed(message,thehash,fromSearch,underline,historylist):
   dainfo=getinfo("https://www.desmos.com/calculator/"+thehash)
